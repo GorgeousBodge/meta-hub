@@ -30,7 +30,7 @@ module.exports = (req, res) => {
     vars: {
       APP_CODE: { set: !!code, length: code.length, from: has('APP_CODE') ? 'APP_CODE' : has('APP_KEY') ? 'APP_KEY (old name, still works)' : null },
       NABU_CASA_URL: { set: has('NABU_CASA_URL'), https: raw('NABU_CASA_URL').startsWith('https://') },
-      HA_TOKEN: key('HA_TOKEN'),
+      HA_TOKEN: { set: has('HA_TOKEN'), length: raw('HA_TOKEN').length, note: 'used as-is (dots are normal in HA tokens)' },
       ANTHROPIC_API_KEY: key('ANTHROPIC_API_KEY'),
       NEWS_MODEL: { set: has('NEWS_MODEL'), note: 'optional' },
       ORS_API_KEY: key('ORS_API_KEY'),
