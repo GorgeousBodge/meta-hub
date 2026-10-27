@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=600, height=600, initial-scale=1, user-scalable=no">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <title>Starter Deck</title>
+  <!-- Copy this folder to start a new app. Replace "starter" with your app's id everywhere. -->
+  <link rel="icon" href="/starter/icon-96.png" sizes="96x96" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/deck/style.css">
+  <style>
+    /* App-only styles. Move to /starter/starter.css if they grow. */
+    #list { position: absolute; inset: 0; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <!-- The HUD: same ids in every app, so Deck.title/status/back work -->
+    <header class="hud">
+      <button class="hud-back focusable" id="hudBack" type="button" aria-label="Back" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="hud-heading">
+        <h1 class="hud-title" id="hudTitle">Starter</h1>
+        <span class="hud-sub" id="hudSub"></span>
+      </div>
+      <div class="hud-status">
+        <span class="status-dot" id="hudDot" aria-hidden="true"></span>
+        <span id="hudStatus">Loading</span>
+        <time class="hud-clock" id="hudClock">--:--</time>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div class="list" id="list"></div>
+    </main>
+
+    <footer class="hints" id="hints" aria-hidden="true"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/starter/app.js"></script>
+</body>
+</html>

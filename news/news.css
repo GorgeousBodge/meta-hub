@@ -1,0 +1,45 @@
+/* ==========================================================================
+   News Deck — app layout. Builds on the shared /deck/style.css
+   (tabs, list, cards, keys, focus, HUD, hints, toast come from there).
+   ========================================================================== */
+
+.view-list {
+  display: grid;
+  grid-template-rows: 64px 1fr;
+}
+
+/* --- Story view -------------------------------------------------------- */
+.view-story {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px var(--pad);
+  gap: 12px;
+}
+.story-meta b { color: var(--accent); font-weight: 700; }
+.story-title {
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.story-summary {
+  flex: 1;
+  min-height: 0;
+  font-size: 21px;
+  line-height: 1.45;
+  color: #dcebf2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+}
+.story-keys {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 12px;
+  height: 84px;
+  flex: 0 0 auto;
+}

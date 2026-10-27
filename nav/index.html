@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Walking and cycling directions with a street map, plus live train and bus times across Great Britain.">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <title>Nav Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Glasses icon comes from nav/.well-known/meta-wearables-manifest.json; this is the browser tab icon -->
+  <link rel="icon" type="image/png" href="/nav/icon-96.png">
+  <link rel="apple-touch-icon" href="/nav/icon-96.png">
+  <link rel="stylesheet" href="/deck/style.css">
+  <link rel="stylesheet" href="/nav/nav.css">
+</head>
+<body>
+  <div class="frame">
+    <header class="hud">
+      <button class="hud-back focusable" id="hudBack" type="button" aria-label="Back" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <div class="hud-heading">
+        <span class="hud-title" id="hudTitle">Nav</span>
+        <span class="hud-sub" id="hudSub"></span>
+      </div>
+      <div class="hud-status">
+        <span class="status-dot" id="hudDot"></span>
+        <span id="hudStatus">GPS</span>
+        <span class="hud-clock" id="hudClock">--:--</span>
+      </div>
+    </header>
+
+    <main class="stage">
+      <section class="view" id="app"></section>
+    </main>
+
+    <footer class="hints" id="hints"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/nav/places.js"></script>
+  <script src="/nav/streetmap.js"></script>
+  <script src="/nav/demo.js"></script>
+  <script src="/nav/app.js"></script>
+</body>
+</html>

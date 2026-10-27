@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=600, height=600, initial-scale=1, user-scalable=no">
+  <meta name="description" content="Launcher for the Deck apps on Meta Ray-Ban Display">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <title>Deck</title>
+  <!-- Glasses icon comes from /.well-known/meta-wearables-manifest.json; this is the browser tab icon -->
+  <link rel="icon" href="/icon-96.png" sizes="96x96" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/deck/style.css">
+  <style>
+    .launcher {
+      position: absolute; inset: 0;
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+      grid-auto-rows: minmax(0, 1fr);
+      gap: 12px;
+      padding: 14px var(--pad) var(--pad);
+    }
+    .launch {
+      min-height: 0;
+      min-width: 0;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 14px 18px;
+    }
+    .launch svg { width: 50px; height: 50px; color: var(--accent); margin-bottom: 2px; }
+    .launch-name {
+      font-family: var(--font-display); font-size: 26px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .launch .card-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .launch .card-meta.is-warn { color: var(--warn); }
+    .launch .card-meta.is-good { color: var(--ok); }
+    .launch-code { border-color: rgba(255, 194, 74, .5); }
+    .launch-code svg, .launch-code .launch-name { color: var(--amber); }
+    .launch-code::before, .launch-code::after { border-color: var(--amber); }
+    .launch-code:focus { border-color: var(--amber); box-shadow: 0 0 0 2px var(--amber), 0 0 24px rgba(255, 194, 74, .35); }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <header class="hud">
+      <button class="hud-back focusable" id="hudBack" type="button" aria-label="Back" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="hud-heading">
+        <h1 class="hud-title" id="hudTitle">Deck</h1>
+        <span class="hud-sub" id="hudSub">Apps</span>
+      </div>
+      <div class="hud-status">
+        <span class="status-dot" id="hudDot" aria-hidden="true"></span>
+        <span id="hudStatus">Linking</span>
+        <time class="hud-clock" id="hudClock">--:--</time>
+      </div>
+    </header>
+
+    <main class="stage">
+      <nav class="launcher" id="launcher" aria-label="Apps"></nav>
+    </main>
+
+    <footer class="hints" id="hints" aria-hidden="true"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/deck/apps.js"></script>
+  <script src="/hub.js"></script>
+</body>
+</html>
