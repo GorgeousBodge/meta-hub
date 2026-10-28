@@ -1,0 +1,79 @@
+/* Connect page: a normal desktop page using the Deck colours (deck/style.css is
+   built for a fixed 600×600 screen, so the sizing is undone here). */
+html, body.connect-page {
+  width: auto;
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+  user-select: text;
+  background: #03080b;
+}
+.cx { max-width: 920px; margin: 0 auto; padding: 40px 24px 60px; display: flex; flex-direction: column; gap: 24px; }
+.cx-head h1 { font-family: var(--font-display); font-size: 34px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.cx-head h1 span { color: var(--dim); font-weight: 600; }
+.cx-head p { margin-top: 8px; color: var(--dim); font-size: 17px; line-height: 1.5; max-width: 680px; }
+
+.cx-panel, .cx-card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 22px 24px;
+}
+.cx-panel::before, .cx-card::before {
+  content: ""; position: absolute; top: -1px; left: -1px; width: 18px; height: 18px;
+  border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); border-top-left-radius: var(--radius);
+}
+.cx-panel h2, .cx-card h2 { font-family: var(--font-display); font-size: 20px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+.cx-dim { color: var(--dim); font-size: 15px; line-height: 1.5; }
+.cx-dim b { color: var(--text); }
+
+#main { display: flex; flex-direction: column; gap: 24px; }
+#main[hidden] { display: none; }
+.cx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.cx-card { display: flex; flex-direction: column; gap: 12px; min-height: 210px; }
+.cx-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cx-card h2 { margin: 0; }
+.cx-email { font-size: 18px; word-break: break-all; }
+.cx-meta { color: var(--dim); font-size: 14px; line-height: 1.6; }
+.cx-meta .warn { color: var(--amber); }
+.cx-actions { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+
+.cx-pill { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.cx-pill.ok { color: var(--ok); }
+.cx-pill.off { color: var(--dim); }
+.cx-pill.warn { color: var(--amber); }
+.cx-pill.err { color: var(--warn); }
+
+.cx-btn {
+  font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line-strong); background: rgba(63, 224, 255, .08);
+  color: var(--accent); cursor: pointer;
+}
+.cx-btn:hover:not(:disabled), .cx-btn:focus-visible { box-shadow: 0 0 0 2px var(--line-strong), 0 0 18px rgba(63, 224, 255, .3); outline: none; }
+.cx-btn:disabled { opacity: .4; cursor: default; }
+.cx-btn-amber { color: var(--amber); border-color: var(--amber); background: rgba(255, 194, 74, .08); }
+.cx-btn-quiet { color: var(--dim); border-color: var(--line); background: transparent; }
+
+.cx-row { display: flex; gap: 10px; align-items: center; }
+.cx-input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: rgba(0, 0, 0, .4); color: var(--text); font: inherit; font-size: 16px;
+}
+.cx-input:focus { outline: none; border-color: var(--line-strong); box-shadow: 0 0 0 2px rgba(95, 227, 255, .4); }
+.cx-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; }
+.cx-field { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.cx-field label { font-family: var(--font-display); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+
+.cx-checks { list-style: none; display: grid; gap: 8px; }
+.cx-checks li { display: flex; gap: 10px; align-items: baseline; font-size: 16px; }
+.cx-checks li::before { content: "●"; font-size: 12px; }
+.cx-checks li.ok::before { color: var(--ok); }
+.cx-checks li.bad::before { color: var(--warn); }
+.cx-checks li span { color: var(--dim); font-size: 14px; }
+
+.cx-banner { border: 1px solid var(--ok); color: var(--ok); border-radius: var(--radius); padding: 14px 18px; font-size: 16px; background: rgba(89, 242, 165, .06); }
+.cx-banner.err { border-color: var(--warn); color: #ffd6de; background: rgba(255, 92, 122, .08); }
+
+.cx-foot { color: var(--dim); font-size: 14px; }
+.cx-foot a { color: var(--accent); }

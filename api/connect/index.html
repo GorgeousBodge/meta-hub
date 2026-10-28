@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <title>Deck · Accounts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/deck/style.css">
+  <link rel="stylesheet" href="/connect/connect.css">
+</head>
+<body class="connect-page">
+  <main class="cx">
+    <header class="cx-head">
+      <h1>Deck <span>Accounts</span></h1>
+      <p>Connect the mail and calendar accounts that Mail Deck and Calendar Deck use. Do this on your computer; the glasses then use the saved connection.</p>
+    </header>
+
+    <div class="cx-banner" id="banner" hidden></div>
+
+    <!-- Access code (shown when none is saved or it's wrong) -->
+    <section class="cx-panel" id="codePanel" hidden>
+      <h2>Access code</h2>
+      <p class="cx-dim">Enter the APP_CODE from Vercel. It's remembered in this browser.</p>
+      <form class="cx-row" id="codeForm">
+        <input class="cx-input" id="codeInput" type="password" autocomplete="off" placeholder="Access code" aria-label="Access code">
+        <button class="cx-btn cx-btn-amber" type="submit">Unlock</button>
+      </form>
+    </section>
+
+    <div id="main" hidden>
+      <section class="cx-grid" id="accounts" aria-label="Accounts"></section>
+
+      <section class="cx-panel" id="setup">
+        <h2>Setup checks</h2>
+        <ul class="cx-checks" id="checks"></ul>
+
+        <div class="cx-field">
+          <label for="redirect">Redirect URI — paste this exactly into Google Cloud and Azure</label>
+          <div class="cx-row">
+            <input class="cx-input cx-mono" id="redirect" readonly>
+            <button class="cx-btn" type="button" id="copyRedirect">Copy</button>
+          </div>
+        </div>
+
+        <div class="cx-field" id="keyGen" hidden>
+          <label>New TOKEN_KEY (made in this browser, never sent anywhere)</label>
+          <div class="cx-row">
+            <input class="cx-input cx-mono" id="keyOut" readonly placeholder="Press Generate">
+            <button class="cx-btn" type="button" id="genKey">Generate</button>
+            <button class="cx-btn" type="button" id="copyKey" disabled>Copy</button>
+          </div>
+          <p class="cx-dim">Add it in Vercel as <b>TOKEN_KEY</b>, then redeploy. Keep a copy somewhere safe: if it changes, you'd need to reconnect both accounts.</p>
+        </div>
+      </section>
+    </div>
+
+    <footer class="cx-foot">
+      <a href="/mail/">Open Mail Deck</a> · <a href="/mail/?demo">Mail demo</a> · <a href="#" id="forget">Forget access code on this browser</a>
+    </footer>
+  </main>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/connect/connect.js"></script>
+</body>
+</html>
