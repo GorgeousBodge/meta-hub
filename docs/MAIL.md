@@ -1,3 +1,4 @@
+[MAIL.md](https://github.com/user-attachments/files/34104451/MAIL.md)
 # Mail Deck (`/mail/`)
 
 Gmail (Primary tab) and Outlook.com (Focused) in one inbox on the glasses: read, summarise, listen, and reply in the same thread after a confirm screen. Accounts are connected on `/connect/`; see `docs/ACCOUNTS.md`.
@@ -150,7 +151,13 @@ Open `https://YOUR-PROJECT.vercel.app/mail/?demo` on your computer (or the glass
 7. Disconnect Outlook on `/connect/`: Mail shows Gmail only, with an "Outlook: not connected" note. Reconnect.
 
 ### Glasses
-Add the web app as `https://YOUR-PROJECT.vercel.app/mail/` (with the final slash, for the icon). The access code is already there if you've used another Deck app.
+The Meta AI app won't save an address ending in `/`, so add the web app as:
+
+`https://YOUR-PROJECT.vercel.app/mail/index.html?code=YOURCODE`
+
+- `index.html` makes the glasses look in `mail/.well-known/` for Mail's icon (without it they read the hub's icon at the top of the site, or none).
+- `?code=` saves the access code on first open (the glasses seem to keep each web app's storage separate) and is then removed from the address bar.
+- The glasses fetch the icon when the app is added: after changing icon files, remove the web app and add it again.
 
 ## If something's wrong
 
