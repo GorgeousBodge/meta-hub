@@ -1,3 +1,4 @@
+[ACCOUNTS.md](https://github.com/user-attachments/files/34104441/ACCOUNTS.md)
 # Accounts — the shared Gmail and Outlook.com sign-in
 
 Mail Deck and Calendar Deck read the same two accounts: one Gmail and one personal Microsoft (Outlook.com) account. You sign in once, on a desktop page, and the server keeps the connection alive. **Attach this file to any chat that builds an app on these accounts.**
@@ -50,7 +51,9 @@ Vercel only picks up variable changes on a new deployment: after adding variable
 Do it on your computer, in this order. Open `/connect/` at the end of each step: its **Setup checks** go green as you go, and it shows the exact **Redirect URI** to paste (`https://YOUR-PROJECT.vercel.app/api/connect/callback`). Always use your main production address (not a preview deployment's long address), because the redirect URI must match exactly.
 
 ### 1. Upstash Redis (token storage)
-1. Vercel → your **meta-deck** project → **Storage** tab → **Create Database** (or **Browse Marketplace**) → **Upstash** → **Upstash for Redis**.
+One database is shared by all the apps (the free plan allows only one). If you already have an Upstash database, connect that to this project instead of creating another: top-level **Storage** tab → the database → **Connect Project**. If Vercel gave the variables a prefix (e.g. `STORAGE_KV_REST_API_URL`), also add plain `KV_REST_API_URL` and `KV_REST_API_TOKEN` with the same values.
+
+1. Vercel → your project → **Storage** tab → **Create Database** (or **Browse Marketplace**) → **Upstash** → **Upstash for Redis**.
 2. Pick the **Free** plan and a region close to London (e.g. `eu-west-1` / Ireland, or London if offered). Name it e.g. `deck-store`.
 3. **Connect to project** → meta-deck, environments **Production** and **Preview**. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` for you.
 4. The free plan allows 500K commands a month, 250 MB and one database. Mail uses a few thousand commands a month.
@@ -70,14 +73,14 @@ Do it on your computer, in this order. Open `/connect/` at the end of each step:
 4. **Data Access** → **Add or remove scopes**. Tick, or paste in "Manually add scopes":
    - `https://www.googleapis.com/auth/gmail.modify`
    - `https://www.googleapis.com/auth/calendar.readonly`
-   - `openid` and `.../auth/userinfo.email`
-   → **Update** → **Save**. A "verification required" notice for restricted scopes is expected: it's for apps offered to the public, not your own account.
-5. **Audience** → **Publishing status** → **Publish app** → confirm. It must say **In production**. (Left in *Testing*, Google expires the refresh token after 7 days.)
-6. **Clients** → **Create client** → Application type **Web application**, name `Meta Deck web`.
+   → **Update** → **Save**. (`openid` and `email` don't need listing: basic sign-in scopes are allowed without it. If the Gmail and Calendar scopes don't appear, enable the two APIs first.) A "verification required" notice for restricted scopes is expected: it's for apps offered to the public, not your own account.
+5. **Branding**: Google won't publish without it. App name `Meta Deck`; support email and developer contact: your Gmail; **no logo** (a logo triggers a review); home page `https://YOUR-PROJECT.vercel.app/`; privacy policy `https://YOUR-PROJECT.vercel.app/privacy.html`; terms `https://YOUR-PROJECT.vercel.app/privacy.html#terms`; authorised domain `YOUR-PROJECT.vercel.app` → **Save**. Ignore prompts to verify branding or use Search Console.
+6. **Audience** → **Publishing status** → **Publish app** → confirm. It must say **In production**. (Left in *Testing*, Google expires the refresh token after 7 days.)
+7. **Clients** → **Create client** → Application type **Web application**, name `Meta Deck web`.
    - **Authorized redirect URIs** → **Add URI** → paste the Redirect URI from `/connect/`.
    - Leave *Authorized JavaScript origins* empty → **Create**.
-7. Copy the **Client ID** and **Client secret** straight away (download the JSON too). Google only shows the full secret at creation; afterwards you'd need to add a new secret.
-8. Vercel: add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` → **Redeploy**.
+8. Copy the **Client ID** and **Client secret** straight away (download the JSON too). Google only shows the full secret at creation; afterwards you'd need to add a new secret.
+9. Vercel: add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` → **Redeploy**.
 
 Google deletes OAuth clients that go unused for six months (with an email warning 30 days before). Using Mail keeps it in use.
 
