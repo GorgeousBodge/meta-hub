@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=600, height=600, initial-scale=1, user-scalable=no">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <meta name="referrer" content="no-referrer">
+  <title>Mail Deck</title>
+  <link rel="icon" href="/mail/icon-96.png" sizes="96x96" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/deck/style.css">
+  <link rel="stylesheet" href="/mail/mail.css">
+</head>
+<body>
+  <div class="frame">
+    <header class="hud">
+      <button class="hud-back focusable" id="hudBack" type="button" aria-label="Back" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="hud-heading">
+        <h1 class="hud-title" id="hudTitle">Mail</h1>
+        <span class="hud-sub" id="hudSub"></span>
+      </div>
+      <div class="hud-status">
+        <span class="status-dot" id="hudDot" data-status="loading" aria-hidden="true"></span>
+        <span id="hudStatus">Loading</span>
+        <time class="hud-clock" id="hudClock">--:--</time>
+      </div>
+    </header>
+
+    <main class="stage">
+      <!-- Inbox -->
+      <section class="view" id="inbox" aria-label="Inbox">
+        <nav class="tabs" id="tabs" aria-label="Accounts"></nav>
+        <div class="list mail-list" id="list">
+          <div class="state"><div class="spin"></div><div class="state-msg">Fetching your inbox…</div></div>
+        </div>
+      </section>
+
+      <!-- Reading -->
+      <section class="view" id="reader" hidden aria-label="Message">
+        <div class="rd-head">
+          <div class="rd-from"><span id="rdFrom"></span><span class="badge" id="rdBadge"></span></div>
+          <div class="rd-subject" id="rdSubject"></div>
+          <div class="rd-meta" id="rdMeta"></div>
+        </div>
+        <div class="rd-body focusable" id="rdBody" tabindex="0" aria-label="Message text">
+          <div class="rd-sum" id="rdSum" hidden>
+            <div class="rd-sum-label">AI summary</div>
+            <div class="rd-sum-text" id="rdSumText"></div>
+            <div class="rd-sum-action" id="rdSumAction" hidden></div>
+          </div>
+          <div class="rd-text" id="rdText"></div>
+        </div>
+        <div class="rd-keys">
+          <button class="key key-speak focusable" id="btnListen" type="button">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+            <span class="key-label" id="btnListenLabel">Listen</span>
+          </button>
+          <button class="key focusable" id="btnReply" type="button">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7 5 12l5 5"/><path d="M5.5 12H14a5 5 0 0 1 5 5v1"/></svg>
+            <span class="key-label">Reply</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Writing a reply -->
+      <section class="view" id="composer" hidden aria-label="Reply">
+        <div class="rp-head" id="rpHead"></div>
+        <div class="list rp-list" id="rpList">
+          <div id="rpSuggest"></div>
+          <label class="field-wrap rp-field" id="rpWrap">
+            <textarea class="field rp-text focusable" id="rpText" rows="3" placeholder="Pinch to write or speak" aria-label="Your reply" autocomplete="off" spellcheck="true"></textarea>
+          </label>
+          <div class="rp-keys">
+            <button class="key focusable" id="btnTidy" type="button">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 19 9.5-9.5M14 4l1 2.5L17.5 7.5 15 8.5 14 11l-1-2.5L10.5 7.5 13 6.5zM19 12l.6 1.4L21 14l-1.4.6L19 16l-.6-1.4L17 14l1.4-.6z"/></svg>
+              <span class="key-label">Tidy up</span>
+            </button>
+            <button class="key key-speak focusable" id="btnReview" type="button">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+              <span class="key-label">Review</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Confirm before sending -->
+      <section class="view" id="confirm" hidden aria-label="Confirm reply">
+        <dl class="cf-meta">
+          <dt>From</dt><dd id="cfFrom"></dd>
+          <dt>To</dt><dd id="cfTo"></dd>
+          <dt>Re</dt><dd id="cfSubject"></dd>
+        </dl>
+        <div class="cf-text focusable" id="cfText" tabindex="0" aria-label="Reply text"></div>
+        <div class="rd-keys">
+          <button class="key focusable" id="btnEdit" type="button">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+            <span class="key-label">Edit</span>
+          </button>
+          <button class="key key-speak focusable" id="btnSend" type="button">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3.5-6.5z"/><path d="m11.5 13.5 3-3"/></svg>
+            <span class="key-label">Send</span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="hints" id="hints" aria-hidden="true"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/mail/demo.js"></script>
+  <script src="/mail/app.js"></script>
+</body>
+</html>
