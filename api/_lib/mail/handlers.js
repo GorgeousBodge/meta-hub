@@ -132,7 +132,8 @@ async function read(req, res) {
     text: body,
     long: isLong(body),
     ai: ai.enabled(),
-    signOff: oneLine(env('MAIL_SIGN_OFF'), 60),
+// MAIL_SIGN_OFF: use | (or \n) for a new line, e.g. "Kind regards|Russ"
+    signOff: env('MAIL_SIGN_OFF').split(/\\n|\|/).map((l) => oneLine(l, 60)).filter(Boolean).slice(0, 3).join('\n'),
   });
 }
 
