@@ -17,7 +17,7 @@ module.exports = (req, res) => {
   if (!allowed(req, res)) return;
   const code = accessCode();
   const homeNeeds = [...missing('NABU_CASA_URL', 'HA_TOKEN'), ...(code ? [] : ['APP_CODE'])];
-    // Accounts (shared by Mail and Calendar) and Mail
+  // Accounts (shared by Mail and Calendar) and Mail
   const storage = store.info();
   const google = has('GOOGLE_CLIENT_ID') && has('GOOGLE_CLIENT_SECRET');
   const microsoft = has('MS_CLIENT_ID') && has('MS_CLIENT_SECRET');
@@ -39,7 +39,7 @@ module.exports = (req, res) => {
     vars: {
       APP_CODE: { set: !!code, length: code.length, from: has('APP_CODE') ? 'APP_CODE' : has('APP_KEY') ? 'APP_KEY (old name, still works)' : null },
       NABU_CASA_URL: { set: has('NABU_CASA_URL'), https: raw('NABU_CASA_URL').startsWith('https://') },
-      HA_TOKEN: { set: has('HA_TOKEN'), length: raw('HA_TOKEN').length, note: 'used as-is (dots are normal in HA tokens)' },
+      HA_TOKEN: key('HA_TOKEN'),
       ANTHROPIC_API_KEY: key('ANTHROPIC_API_KEY'),
       NEWS_MODEL: { set: has('NEWS_MODEL'), note: 'optional' },
       ORS_API_KEY: key('ORS_API_KEY'),
@@ -47,7 +47,7 @@ module.exports = (req, res) => {
       RAILDATA_DEPARTURES_URL: { set: has('RAILDATA_DEPARTURES_URL'), note: 'optional' },
       TRANSPORTAPI_APP_ID: key('TRANSPORTAPI_APP_ID'),
       TRANSPORTAPI_APP_KEY: key('TRANSPORTAPI_APP_KEY'),
-            KV_REST_API_URL: { set: storage.url, from: storage.urlFrom },
+      KV_REST_API_URL: { set: storage.url, from: storage.urlFrom },
       KV_REST_API_TOKEN: { set: storage.token },
       TOKEN_KEY: { set: has('TOKEN_KEY'), valid: storage.key, problem: storage.keyError },
       GOOGLE_CLIENT_ID: { set: has('GOOGLE_CLIENT_ID') },
