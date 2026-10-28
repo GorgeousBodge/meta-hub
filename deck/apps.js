@@ -25,4 +25,12 @@ window.DECK_APPS = [
     blurb: 'Directions · trains · buses',
     icon: '<path d="M15 50V40h12l10-10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M51 14 44.5 34.5 40.2 26.8 32.5 22.5Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   },
+  {
+    id: 'mail',
+    name: 'Mail',
+    blurb: 'Gmail · Outlook · replies',
+    icon: '<rect x="10" y="16" width="44" height="32" rx="4" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M12 20l20 15 20-15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    badge: 'mail/unread',      // unread count on the tile (deck/badges.js)
+    badgeLabel: 'unread',
+  },
 ];
