@@ -5,6 +5,10 @@
 
 .ico { stroke-width: 1.9; }
 
+/* Never let long names (e.g. a camera's) widen the page past the screen */
+.frame { grid-template-columns: minmax(0, 1fr); }
+.frame > * { min-width: 0; }
+
 /* Views scroll with padding (rooms can run past one screen) */
 .view {
   padding: var(--pad);
