@@ -1,3 +1,4 @@
+[README (1).md](https://github.com/user-attachments/files/34152018/README.1.md)
 # Home Deck
 
 A Home Assistant dashboard built for **Meta Ray-Ban Display** glasses: a 600×600, dark, high-contrast HUD that you drive with the Neural Band (swipe to move, pinch to select).
@@ -48,10 +49,16 @@ Settings are in the `CONFIG` block at the top of `home/app.js`:
 | Setting | Default | What it does |
 |---|---|---|
 | `tvMediaPlayer` / `tvRemote` | `null` (auto-detect) | Set these to your TV's entity IDs if it isn't found automatically, e.g. `'media_player.samsung_tv'` |
-| `domains` | lights, switches, fans, climate, scenes, scripts | Which kinds of device to show |
+| `domains` | lights, switches, fans, climate, cameras, scenes, scripts | Which kinds of device to show |
 | `dimmableOpensDetail` | `true` | `false` makes a pinch on a dimmable light just toggle it |
 | `brightnessStep` | `5` | Brightness change (%) per swipe |
 | `pollMs` | `5000` | How often device states refresh (ms) |
+| `cameraRefreshMs` | `1000` | How often the camera picture refreshes (ms) |
+| `ptzSpeed` / `ptzDuration` | `0.6` / `0.4` | How fast, and for how long (seconds), each swipe moves the camera |
+| `cameraControls` | `{}` | Extra buttons for a camera, e.g. `{ 'camera.front_door': ['switch.front_door_privacy'] }` |
+| `cameraPtz` | `{}` | Which entity moves a camera, if it's a different one, e.g. `{ 'camera.front_door': 'camera.front_door_mainstream' }` |
+| `pollMs` | `5000` | How often device states refresh (ms) |
+| `keys` | arrow keys, Enter, Escape… | Map these to different keys if your input arrives differently |
 
 Gesture keys (arrow keys, Enter, Escape…) are shared by every app: change them in `KEYS` in `deck/deck.js`.
 
@@ -63,11 +70,20 @@ Gesture keys (arrow keys, Enter, Escape…) are shared by every app: change them
 - **Power and volume** work through the TV's `media_player` entity, including when it comes from SmartThings.
 - **Turning the TV on from fully off** usually needs Wake-on-LAN set up in the Samsung integration.
 
+## Cameras
+
+Any `camera.*` entity in Home Assistant appears on the Home screen, and in its room if it has an area.
+
+- **Picture:** a still image refreshed every second through the secure proxy. It's never cached.
+- **Move (pan/tilt):** pinch the picture to enter move mode (amber frame), swipe to move, and pinch or Back to finish. This uses Home Assistant's **ONVIF** integration, so the camera must be added through ONVIF and support pan/tilt. If it can't move, the app says so.
+- **Settings buttons:** switches and selects on the same device as the camera (such as privacy mode, motion detection and night vision) appear under the picture automatically. So do camera-related ones in the same area. ONVIF alone rarely provides these; the **Dahua** or **Imou Life** integrations (via HACS) usually do. Sirens, reboot and similar risky switches are never shown.
+- If the settings come from a different integration than the moving camera, put them in the same area in Home Assistant, or list them in `cameraControls` (and set `cameraPtz` if needed).
+
 ## Security
 
 - `HA_TOKEN` is used only by `api/home.js` on Vercel's servers. **Never put your token in `index.html`, `app.js` or any file the browser loads.** A Vercel website is public even when your Vercel settings are private.
 - Every request must carry the access code (`APP_CODE`). Without it, the server function rejects the request.
-- The function only allows reading states and calling services for lights, switches, fans, climate, scenes, scripts, media players and remotes. Locks, alarms and other domains can't be reached through it.
+- The function only allows reading states, camera pictures, and actions on lights, switches, fans, climate, cameras, selects, scenes, scripts, media players and remotes. Every action must name specific devices of those types, so locks, alarms, covers (garage doors) and so on can't be reached, even through `homeassistant.toggle`. "All" and whole-area commands are refused too.
 - If you think your code or token has leaked, revoke the token in Home Assistant, create a new one and change `APP_CODE` in Vercel, then redeploy. Every Deck app will ask for the new code.
 
 ## Troubleshooting
