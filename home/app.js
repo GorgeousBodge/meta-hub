@@ -19,8 +19,21 @@
     tvMediaPlayer: null, // e.g. 'media_player.samsung_tv' — null = auto-detect
     tvRemote: null,      // e.g. 'remote.samsung_tv'
 
-    domains: ['light', 'switch', 'fan', 'climate', 'scene', 'script'],
+    domains: ['light', 'switch', 'fan', 'climate', 'camera', 'scene', 'script'],
     dimmableOpensDetail: true, // false = dimmable lights simply toggle like switches
+    // Cameras
+    cameraRefreshMs: 1000, // how often the picture refreshes
+    ptzSpeed: 0.6,         // 0–1
+    ptzDuration: 0.4,      // seconds each swipe moves the camera for
+    // Controls are found automatically (same device, or same area with a camera-ish
+    // name). Add or override them here: { 'camera.front_door': ['switch.front_door_privacy'] }
+    cameraControls: {},
+    // If the camera you view isn't the one that can move (e.g. a Dahua/Imou entity
+    // alongside an ONVIF one): { 'camera.front_door': 'camera.front_door_mainstream' }
+    cameraPtz: {},
+
+    brightnessStep: 5,         // % per left/right press
+    adjustSendDelay: 350,      // ms of no input before a new value is sent to HA
     brightnessStep: 5,         // % per left/right press
     adjustSendDelay: 350,      // ms of no input before a new value is sent to HA
     repeatDelay: 380,   // ms before hold-to-repeat starts
@@ -48,7 +61,21 @@
     ffw:      { key: 'KEY_FF' },
   };
 
-  const DOMAIN_ICON = { light: 'bulb', switch: 'plug', fan: 'fan', climate: 'thermo', scene: 'scene', script: 'run' };
+  const DOMAIN_ICON = { light: 'bulb', switch: 'plug', fan: 'fan', climate: 'thermo', camera: 'cam', scene: 'scene', script: 'run' };
+
+  // For each camera: switches/selects on the same device, and in the same area.
+  const CAMERA_TEMPLATE =
+    `{% set ns = namespace(out=[]) %}` +
+    `{% for c in states.camera %}` +
+    `{% set d = device_id(c.entity_id) %}{% set a = area_id(c.entity_id) %}` +
+    `{% set same = (device_entities(d) if d else []) | select('match', '(switch|select)[.]') | list %}` +
+    `{% set near = (area_entities(a) if a else []) | select('match', '(switch|select)[.]') | list %}` +
+    `{% set ns.out = ns.out + [{'id': c.entity_id, 'device': same, 'area': near}] %}` +
+    `{% endfor %}{{ ns.out | tojson }}`;
+  // Area matches only count if the name sounds like a camera setting.
+  const CAMERA_WORDS = /privacy|infrared|night|(^|[._])ir([._]|$)|motion|detect|human|person|spotlight|white_light|tracking|indicator|status_?led|camera|cam/i;
+  // Never offered as one-pinch buttons.
+  const CAMERA_EXCLUDE = /siren|alarm|reboot|restart|format|reset|update/i;
   const TOGGLEABLE = ['light', 'switch', 'fan'];
 
   // One REST call returns every area with its relevant entities.
@@ -66,7 +93,16 @@
     back: $('#hudBack'),
     homeGrid: $('#homeGrid'),
     roomGrid: $('#roomGrid'),
-    views: { home: $('#view-home'), room: $('#view-room'), detail: $('#view-detail'), tv: $('#view-tv') },
+    views: { home: $('#view-home'), room: $('#view-room'), detail: $('#view-detail'), camera: $('#view-camera'), tv: $('#view-tv') },
+    cam: {
+      view: $('#camView'),
+      img: $('#camImg'),
+      status: $('#camStatus'),
+      statusText: $('#camStatusText'),
+      msg: $('#camMsg'),
+      hint: $('#camHint'),
+      controls: $('#camControls'),
+    },
     detail: {
       root: $('#detail'),
       readout: $('#detailReadout'),
@@ -89,6 +125,9 @@
     homeFocus: null,
     lastError: '',
     detail: null, // { id, model, value, lockUntil, timer }
+    cameras: [],          // camera entity ids
+    camLinks: new Map(),  // camera id -> [switch/select ids]
+    cam: null,            // the camera being viewed
   };
 
   /* ---------------------------------------------------------------------
@@ -121,8 +160,33 @@
     return fallbackAreas();
   }
 
+  async function fetchCameras() {
+    state.cameras = [...state.entities.keys()].filter((id) => domainOf(id) === 'camera');
+    let rows = [];
+    if (state.cameras.length) {
+      try {
+        if (DEMO) rows = demo.cameraLinks();
+        else {
+          const res = await ha('template', 'POST', { template: CAMERA_TEMPLATE });
+          rows = typeof res === 'string' ? JSON.parse(res) : res;
+        }
+      } catch (err) {
+        console.warn('Camera control lookup failed; using CONFIG.cameraControls only.', err);
+      }
+    }
+    state.camLinks = new Map(state.cameras.map((id) => {
+      const row = (Array.isArray(rows) ? rows : []).find((r) => r.id === id) || {};
+      const device = row.device || [];
+      const near = (row.area || []).filter((e) => CAMERA_WORDS.test(e) && !device.includes(e));
+      const ids = [...new Set([...(CONFIG.cameraControls[id] || []), ...device, ...near])]
+        .filter((e) => state.entities.has(e) && !CAMERA_EXCLUDE.test(e))
+        .slice(0, 8);
+      return [id, ids];
+    }));
+  }
+
   function fallbackAreas() {
-    const labels = { light: 'Lights', switch: 'Switches', fan: 'Fans', scene: 'Scenes', script: 'Scripts' };
+    const labels = { light: 'Lights', switch: 'Switches', fan: 'Fans', climate: 'Heating', camera: 'Cameras', scene: 'Scenes', script: 'Scripts' };
     const ids = [...state.entities.keys()];
     return CONFIG.domains
       .map((d) => ({ id: `_${d}`, name: labels[d], entities: ids.filter((id) => id.startsWith(`${d}.`)) }))
@@ -162,7 +226,25 @@
   }
 
   const hasDetail = (id) =>
-    domainOf(id) === 'climate' || (CONFIG.dimmableOpensDetail && isDimmable(id));
+    domainOf(id) === 'climate' || domainOf(id) === 'camera' || (CONFIG.dimmableOpensDetail && isDimmable(id));
+
+  // "Front Door Privacy Mode" next to camera "Front Door" -> "Privacy Mode"
+  function stripShared(name, ref) {
+    const a = name.split(/\s+/);
+    const b = String(ref || '').toLowerCase().split(/\s+/);
+    let i = 0;
+    while (i < a.length - 1 && i < b.length && a[i].toLowerCase() === b[i]) i++;
+    const rest = a.slice(i).join(' ');
+    return rest.charAt(0).toUpperCase() + rest.slice(1);
+  }
+
+  function controlIcon(id) {
+    if (/privacy/i.test(id)) return 'eye-off';
+    if (/infrared|night|(^|[._])ir([._]|$)/i.test(id)) return 'moon';
+    if (/motion|detect|human|person|tracking/i.test(id)) return 'motion';
+    if (/light|led|spot/i.test(id)) return 'bulb';
+    return domainOf(id) === 'select' ? 'list' : 'plug';
+  }
   const icon = (name, cls = '') =>
     `<svg class="ico ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
@@ -182,6 +264,8 @@
     if (!s || s.state === 'unavailable' || s.state === 'unknown') return { text: 'Offline', on: false, na: true };
     if (d === 'scene') return { text: 'Activate', on: false };
     if (d === 'script') return { text: s.state === 'on' ? 'Running' : 'Run', on: s.state === 'on' };
+    if (d === 'camera') return { text: 'Live view', on: false };
+    if (d === 'select') return { text: s.state, on: !/^(off|disabled?|none|close)$/i.test(s.state) };
     if (d === 'climate') {
       const a = s.attributes || {};
       if (s.state === 'off') return { text: `Off · ${fmtNum(a.current_temperature)}°`, on: false };
@@ -196,7 +280,11 @@
 
   function areaSummary(area) {
     const toggles = area.entities.filter((id) => TOGGLEABLE.includes(domainOf(id)));
-    if (!toggles.length) return { text: `${area.entities.length} actions`, on: 0 };
+    if (!toggles.length) {
+      const n = area.entities.length;
+      const cams = area.entities.every((id) => domainOf(id) === 'camera');
+      return { text: `${n} ${cams ? 'camera' : 'item'}${n === 1 ? '' : 's'}`, on: 0 };
+    }
     const on = toggles.filter((id) => state.entities.get(id)?.state === 'on').length;
     return { text: on ? `${on} of ${toggles.length} on` : 'All off', on };
   }
@@ -236,7 +324,18 @@
         key: 'tv', name: 'TV Remote', meta: tvSummary(), iconName: 'tv',
         extraClass: 'tile-feature', onSelect: () => openView('tv'),
       }),
+      ...(state.cameras.length ? [makeTile({
+        key: 'cams',
+        name: state.cameras.length === 1 ? displayName(state.cameras[0]) : 'Cameras',
+        meta: state.cameras.length === 1 ? 'Live view' : `${state.cameras.length} cameras`,
+        iconName: 'cam',
+        extraClass: 'tile-feature',
+        onSelect: () => (state.cameras.length === 1
+          ? openCamera(state.cameras[0])
+          : openRoom({ id: '_cameras', name: 'Cameras', entities: state.cameras })),
+      })] : []),
       ...state.areas.map((area) => makeTile({
+
         key: `area:${area.id}`, name: area.name, meta: areaSummary(area).text,
         iconName: 'door', onSelect: () => openRoom(area),
       })),
@@ -258,7 +357,11 @@
       meta: '',
       iconName: DOMAIN_ICON[domainOf(id)] || 'bulb',
       more: hasDetail(id),
-      onSelect: () => (hasDetail(id) ? openDetail(id) : toggleEntity(id)),
+      onSelect: () => {
+        if (domainOf(id) === 'camera') openCamera(id);
+        else if (hasDetail(id)) openDetail(id);
+        else toggleEntity(id);
+      },
     }));
     dom.roomGrid.replaceChildren(...tiles);
     refreshVisible();
@@ -275,6 +378,8 @@
     for (const tile of dom.homeGrid.querySelectorAll('.tile')) {
       if (tile.dataset.key === 'tv') {
         tile.querySelector('.tile-meta').textContent = tvSummary();
+      } else if (tile.dataset.key === 'cams') {
+        // static
       } else {
         const area = state.areas.find((a) => `area:${a.id}` === tile.dataset.key);
         if (area) { const s = areaSummary(area); setTileStatus(tile, s.text, s.on > 0); }
@@ -287,6 +392,7 @@
     const player = state.entities.get(state.tv.player);
     document.querySelector('[data-tv="mute"]').classList.toggle('is-on', !!player?.attributes?.is_volume_muted);
     if (state.view === 'detail') renderDetail();
+    if (state.view === 'camera') refreshCamControls();
     updateHud();
   }
 
@@ -297,6 +403,8 @@
       dom.sub.textContent = areaSummary(state.room).text;
     } else if (state.view === 'detail') {
       dom.sub.textContent = state.room?.name || '';
+    } else if (state.view === 'camera') {
+      dom.sub.textContent = state.cam?.moving ? 'Move mode' : (state.cam?.from?.name || '');
     } else if (state.view === 'tv') {
       dom.sub.textContent = tvSummary();
     }
@@ -307,6 +415,7 @@
      --------------------------------------------------------------------- */
   function openView(name, title, focusTarget) {
     if (state.view === 'home' && name !== 'home') state.homeFocus = document.activeElement;
+    if (state.view === 'camera' && name !== 'camera') stopCamera();
     for (const [key, el] of Object.entries(dom.views)) el.hidden = key !== name;
     state.view = name;
     dom.title.textContent = title || dom.views[name].dataset.title;
@@ -325,6 +434,18 @@
   }
 
   function goBack() {
+    if (state.view === 'camera') {
+      const cam = state.cam;
+      if (cam?.moving) { setMoveMode(false); return; }
+      const from = cam?.from;
+      if (from) {
+        const tile = dom.roomGrid.querySelector(`[data-key="${CSS.escape(cam.id)}"]`);
+        openView('room', from.name, tile);
+      } else {
+        openView('home');
+      }
+      return;
+    }
     if (state.view === 'detail' && state.room) {
       const id = state.detail?.id;
       flushAdjust();
@@ -518,6 +639,201 @@
     schedulePoll(700);
   }
 
+  /* ---------------------------------------------------------------------
+     Camera: picture refreshed every second, move mode, settings buttons
+     --------------------------------------------------------------------- */
+  // Image fetch: the access code goes in the URL, like every Deck request.
+  async function fetchSnapshot(id) {
+    if (DEMO) return demo.snapshot(id);
+    const q = new URLSearchParams({ path: `camera_proxy/${id}` });
+    if (Deck.code) q.set('c', Deck.code);
+    const res = await fetch(`/api/home?${q}`, { cache: 'no-store' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const err = new Error(data.error || `Camera error (${res.status})`);
+      err.status = res.status;
+      if (res.status === 401 && data.locked) {
+        err.locked = true;
+        Deck.lock(Deck.code ? 'Wrong access code' : 'Access code needed');
+      }
+      throw err;
+    }
+    return res.blob();
+  }
+
+  function openCamera(id) {
+    stopCamera();
+    const from = state.view === 'room' ? state.room : null;
+    state.cam = { id, from, moving: false, busy: false, timer: null, ticker: null, url: null, lastOk: 0, error: '', noPtz: false };
+    dom.cam.img.removeAttribute('src');
+    dom.cam.msg.textContent = '';
+    dom.cam.hint.textContent = 'Pinch to move camera';
+    setMoveMode(false);
+    renderCamControls();
+    openView('camera', displayName(id));
+    paintCamStatus();
+    state.cam.ticker = setInterval(paintCamStatus, 500);
+    camLoop();
+  }
+
+  function stopCamera() {
+    const cam = state.cam;
+    if (!cam) return;
+    clearTimeout(cam.timer);
+    clearInterval(cam.ticker);
+    if (cam.url) URL.revokeObjectURL(cam.url);
+    dom.cam.view.classList.remove('is-moving');
+    state.cam = null;
+  }
+
+  function camLoop() {
+    const cam = state.cam;
+    if (!cam || state.view !== 'camera') return;
+    if (document.hidden || Deck.locked) { cam.timer = setTimeout(camLoop, 1000); return; }
+    const started = performance.now();
+    fetchSnapshot(cam.id)
+      .then((blob) => {
+        if (state.cam !== cam) return;
+        const url = URL.createObjectURL(blob);
+        dom.cam.img.src = url;
+        if (cam.url) URL.revokeObjectURL(cam.url);
+        cam.url = url;
+        cam.lastOk = Date.now();
+        cam.error = '';
+      })
+      .catch((err) => {
+        if (state.cam !== cam) return;
+        console.warn(err);
+        cam.error = err.locked ? friendlyError(err) : (err.message || 'No picture');
+      })
+      .finally(() => {
+        if (state.cam !== cam || state.view !== 'camera') return;
+        paintCamStatus();
+        const wait = Math.max(150, CONFIG.cameraRefreshMs - (performance.now() - started));
+        cam.timer = setTimeout(camLoop, wait);
+      });
+  }
+
+  function privacyOn(cam) {
+    return (state.camLinks.get(cam.id) || []).some((e) =>
+      /privacy/i.test(e) && state.entities.get(e)?.state === 'on');
+  }
+
+  function paintCamStatus() {
+    const cam = state.cam;
+    if (!cam) return;
+    const age = cam.lastOk ? (Date.now() - cam.lastOk) / 1000 : Infinity;
+    const s = dom.cam.status;
+    s.classList.toggle('is-error', !cam.lastOk && !!cam.error);
+    s.classList.toggle('is-stale', !!cam.lastOk && age >= 4);
+    dom.cam.statusText.textContent = !cam.lastOk
+      ? (cam.error ? 'No signal' : 'Connecting')
+      : age < 4 ? 'Live' : `${Math.round(age)}s ago`;
+    let msg = '';
+    if (privacyOn(cam)) msg = 'Privacy mode on';
+    else if (!cam.lastOk && cam.error) msg = cam.error;
+    else if (!cam.lastOk) msg = 'Connecting…';
+    dom.cam.msg.textContent = msg;
+  }
+
+  function setMoveMode(on) {
+    const cam = state.cam;
+    if (!cam) return;
+    if (on && cam.noPtz) { toast('This camera can’t be moved from here', true); bump(dom.cam.view); return; }
+    cam.moving = !!on;
+    dom.cam.view.classList.toggle('is-moving', cam.moving);
+    dom.cam.view.setAttribute('aria-pressed', String(cam.moving));
+    updateHud();
+  }
+
+  async function ptz(dir) {
+    const cam = state.cam;
+    if (!cam || cam.busy) return; // drop repeats while a move is in flight
+    cam.busy = true;
+    const v = dom.cam.view;
+    v.classList.remove('is-nudge');
+    void v.offsetWidth;
+    v.classList.add('is-nudge');
+    const data = {
+      entity_id: CONFIG.cameraPtz[cam.id] || cam.id,
+      move_mode: 'ContinuousMove',
+      continuous_duration: CONFIG.ptzDuration,
+      speed: CONFIG.ptzSpeed,
+    };
+    if (dir === 'left') data.pan = 'LEFT';
+    if (dir === 'right') data.pan = 'RIGHT';
+    if (dir === 'up') data.tilt = 'UP';
+    if (dir === 'down') data.tilt = 'DOWN';
+    try {
+      await callService('onvif', 'ptz', data);
+      setTimeout(() => { if (state.cam === cam) { clearTimeout(cam.timer); camLoop(); } }, CONFIG.ptzDuration * 1000 + 150);
+    } catch (err) {
+      console.error(err);
+      if (err.status === 400 || err.status === 403) {
+        cam.noPtz = true;
+        dom.cam.hint.textContent = '';
+        setMoveMode(false);
+        toast('This camera can’t be moved from here', true);
+      } else {
+        toast(friendlyError(err), true);
+      }
+    } finally {
+      cam.busy = false;
+    }
+  }
+
+  function renderCamControls() {
+    const cam = state.cam;
+    const ids = state.camLinks.get(cam.id) || [];
+    const camName = displayName(cam.id);
+    if (!ids.length) {
+      const p = document.createElement('p');
+      p.className = 'cam-empty';
+      p.textContent = 'No camera settings found. Add the Dahua or Imou Life integration for privacy, night vision and motion controls.';
+      dom.cam.controls.replaceChildren(p);
+      return;
+    }
+    const keys = ids.map((id) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'key focusable';
+      b.dataset.key = id;
+      b.innerHTML = `${icon(controlIcon(id))}<span class="key-label"></span><span class="key-state"></span>`;
+      b.querySelector('.key-label').textContent = stripShared(displayName(id), camName);
+      b._select = () => camControl(id);
+      return b;
+    });
+    dom.cam.controls.replaceChildren(...keys);
+    refreshCamControls();
+  }
+
+  function refreshCamControls() {
+    for (const b of dom.cam.controls.querySelectorAll('.key')) {
+      const s = entityStatus(b.dataset.key);
+      b.querySelector('.key-state').textContent = s.text;
+      b.classList.toggle('is-on', !!s.on);
+      b.classList.toggle('is-unavailable', !!s.na);
+    }
+    if (state.cam) paintCamStatus();
+  }
+
+  async function camControl(id) {
+    const s = state.entities.get(id);
+    if (!s || s.state === 'unavailable' || s.state === 'unknown') { toast('Setting unavailable', true); return; }
+    if (domainOf(id) === 'select') {
+      const opts = s.attributes?.options || [];
+      const i = opts.indexOf(s.state);
+      if (opts.length) s.state = opts[(i + 1) % opts.length]; // optimistic
+      refreshCamControls();
+      await safely(() => callService('select', 'select_next', { entity_id: id, cycle: true }));
+    } else {
+      s.state = s.state === 'on' ? 'off' : 'on';
+      refreshCamControls();
+      await safely(() => callService('homeassistant', 'toggle', { entity_id: id }));
+    }
+    schedulePoll(700);
+  }
+
   const tvBusy = new Set();
   async function runTv(name) {
     const action = TV_ACTIONS[name];
@@ -576,6 +892,7 @@
       if (!state.areas.length) {
         state.areas = await fetchAreas();
         detectTv();
+        await fetchCameras();
         renderHome();
         if (state.view === 'home') focusEl(firstFocusable('home'));
       }
@@ -621,6 +938,13 @@
       e.preventDefault();
 
       if (action === 'back') { if (!e.repeat) goBack(); return; }
+
+      // Camera move mode: swipes pan/tilt the camera (holding repeats).
+      if (state.cam?.moving && document.activeElement === dom.cam.view &&
+          ['up', 'down', 'left', 'right'].includes(action)) {
+        ptz(action);
+        return;
+      }
 
       // Adjust mode: left/right change the value instead of moving focus (key repeat = hold).
       if ((action === 'left' || action === 'right') && document.activeElement === dom.detail.adjust) {
@@ -696,6 +1020,10 @@
       adjustBy(x >= 0.75 ? 1 : -1);
     });
     dom.detail.power._select = detailPower;
+
+    dom.cam.view._select = () => setMoveMode(!state.cam?.moving);
+    // Leaving the picture (e.g. tapping a control) ends move mode.
+    dom.cam.view.addEventListener('blur', () => { if (state.cam?.moving) setMoveMode(false); });
   }
 
   function bindRemote() {
@@ -714,7 +1042,7 @@
       { id: 'kitchen', name: 'Kitchen', entities: ['light.kitchen_spots', 'light.kitchen_under_cabinet', 'switch.kitchen_coffee_machine'] },
       { id: 'bedroom', name: 'Bedroom', entities: ['light.bedroom_main', 'light.bedroom_bedside_left', 'light.bedroom_bedside_right', 'climate.bedroom_thermostat', 'fan.bedroom_fan'] },
       { id: 'office', name: 'Office', entities: ['light.office_desk', 'switch.office_monitor', 'script.office_focus_mode'] },
-      { id: 'hallway', name: 'Hallway', entities: ['light.hallway', 'light.hallway_porch'] },
+      { id: 'hallway', name: 'Hallway', entities: ['light.hallway', 'light.hallway_porch', 'camera.front_door'] },
       { id: 'bathroom', name: 'Bathroom', entities: ['light.bathroom', 'fan.bathroom_extractor'] },
     ];
     const title = (id) => id.split('.')[1].split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
@@ -732,6 +1060,8 @@
         });
       } else if (d === 'scene') {
         st = '2026-01-01T00:00:00';
+      } else if (d === 'camera') {
+        st = 'idle';
       } else {
         const on = TOGGLEABLE.includes(d) && i % 3 === 0;
         st = on ? 'on' : 'off';
@@ -749,7 +1079,75 @@
     });
     db.set('remote.samsung_tv', { entity_id: 'remote.samsung_tv', state: 'on', attributes: { friendly_name: 'Samsung TV' } });
 
+    // Cameras
+    db.set('camera.garden', { entity_id: 'camera.garden', state: 'idle', attributes: { friendly_name: 'Garden' } });
+    db.set('switch.front_door_privacy_mode', { entity_id: 'switch.front_door_privacy_mode', state: 'off', attributes: { friendly_name: 'Front Door Privacy mode' } });
+    db.set('switch.front_door_motion_detection', { entity_id: 'switch.front_door_motion_detection', state: 'on', attributes: { friendly_name: 'Front Door Motion detection' } });
+    db.set('select.front_door_night_vision', { entity_id: 'select.front_door_night_vision', state: 'Auto', attributes: { friendly_name: 'Front Door Night vision', options: ['Auto', 'Infrared', 'Off'] } });
+    db.set('switch.front_door_siren', { entity_id: 'switch.front_door_siren', state: 'off', attributes: { friendly_name: 'Front Door Siren' } });
+    const ptzPos = { 'camera.front_door': { x: 0, y: 0 }, 'camera.garden': { x: 0, y: 0 } };
+
+    function cameraLinks() {
+      return [
+        { id: 'camera.front_door', device: ['switch.front_door_privacy_mode', 'switch.front_door_motion_detection', 'select.front_door_night_vision', 'switch.front_door_siren'], area: ['light.hallway'] },
+        { id: 'camera.garden', device: [], area: [] },
+      ];
+    }
+
+    function snapshot(id) {
+      const c = document.createElement('canvas');
+      c.width = 640;
+      c.height = 360;
+      const g = c.getContext('2d');
+      const pos = ptzPos[id] || { x: 0, y: 0 };
+      const privacy = id === 'camera.front_door' && db.get('switch.front_door_privacy_mode').state === 'on';
+      const night = id === 'camera.front_door' && db.get('select.front_door_night_vision').state === 'Infrared';
+      if (privacy) {
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, 640, 360);
+      } else {
+        const sky = g.createLinearGradient(0, 0, 0, 360);
+        sky.addColorStop(0, night ? '#1d2a24' : '#2a4b6e');
+        sky.addColorStop(1, night ? '#0b120f' : '#0d1a26');
+        g.fillStyle = sky;
+        g.fillRect(0, 0, 640, 360);
+        g.save();
+        g.translate(-pos.x * 40, pos.y * 30);
+        g.fillStyle = night ? '#2f3d36' : '#2f4a3a';
+        g.fillRect(-400, 250, 1600, 200); // lawn
+        g.fillStyle = night ? '#4a5650' : '#6b5a4a';
+        g.fillRect(180, 120, 260, 140); // house
+        g.fillStyle = night ? '#38433d' : '#3d2f26';
+        g.beginPath(); g.moveTo(160, 125); g.lineTo(310, 40); g.lineTo(460, 125); g.fill(); // roof
+        g.fillStyle = night ? '#a8b8ae' : '#d9b36a';
+        g.fillRect(290, 180, 40, 80); // door
+        g.fillStyle = night ? '#2a3530' : '#1f2d24';
+        for (let t = -300; t < 1000; t += 170) { g.beginPath(); g.arc(t, 250, 40, Math.PI, 0); g.fill(); } // hedges
+        g.restore();
+      }
+      g.fillStyle = 'rgba(255,255,255,.85)';
+      g.font = '600 16px monospace';
+      g.fillText(new Date().toLocaleTimeString('en-GB'), 520, 340);
+      g.fillText(db.get(id)?.attributes.friendly_name || id, 16, 340);
+      return new Promise((resolve) => c.toBlob(resolve, 'image/jpeg', 0.8));
+    }
+
     function service(domain, svc, data = {}) {
+      if (domain === 'onvif' && svc === 'ptz') {
+        const p = ptzPos[data.entity_id];
+        if (!p) return Promise.reject(Object.assign(new Error('Not a PTZ camera'), { status: 400 }));
+        if (data.pan === 'LEFT') p.x -= 1;
+        if (data.pan === 'RIGHT') p.x += 1;
+        if (data.tilt === 'UP') p.y += 1;
+        if (data.tilt === 'DOWN') p.y -= 1;
+        return new Promise((r) => setTimeout(() => r([]), 150));
+      }
+      if (domain === 'select' && svc === 'select_next') {
+        const s = db.get(data.entity_id);
+        const o = s.attributes.options;
+        s.state = o[(o.indexOf(s.state) + 1) % o.length];
+        return new Promise((r) => setTimeout(() => r([]), 120));
+      }
       for (const id of [].concat(data.entity_id || [])) {
         const s = db.get(id);
         if (!s) continue;
@@ -783,6 +1181,8 @@
     return {
       areas: () => structuredClone(AREAS),
       states: () => structuredClone([...db.values()]),
+      cameraLinks,
+      snapshot,
       service,
     };
   })();
@@ -799,6 +1199,7 @@
       await fetchStates();
       state.areas = await fetchAreas();
       detectTv();
+      await fetchCameras();
       setStatus(DEMO ? 'demo' : 'online');
     } catch (err) {
       console.error(err);
