@@ -238,6 +238,12 @@
     return rest.charAt(0).toUpperCase() + rest.slice(1);
   }
 
+  // ONVIF names cameras by stream profile ("Security Camera Profile000"): drop that ending.
+  function camName(id) {
+    const full = displayName(id);
+    return full.replace(/[\s_-]*(profile[\s_]*\d+|main[\s_]*stream|sub[\s_]*stream)$/i, '').trim() || full;
+  }
+
   function controlIcon(id) {
     if (/privacy/i.test(id)) return 'eye-off';
     if (/infrared|night|(^|[._])ir([._]|$)/i.test(id)) return 'moon';
@@ -326,7 +332,7 @@
       }),
       ...(state.cameras.length ? [makeTile({
         key: 'cams',
-        name: state.cameras.length === 1 ? displayName(state.cameras[0]) : 'Cameras',
+        name: state.cameras.length === 1 ? camName(state.cameras[0]) : 'Cameras',
         meta: state.cameras.length === 1 ? 'Live view' : `${state.cameras.length} cameras`,
         iconName: 'cam',
         extraClass: 'tile-feature',
@@ -353,7 +359,7 @@
   function renderRoom(area) {
     const tiles = area.entities.map((id) => makeTile({
       key: id,
-      name: displayName(id, area.name),
+      name: domainOf(id) === 'camera' ? camName(id) : displayName(id, area.name),
       meta: '',
       iconName: DOMAIN_ICON[domainOf(id)] || 'bulb',
       more: hasDetail(id),
@@ -645,7 +651,7 @@
   // Each frame loads as an ordinary image from /api/home (the access code is in
   // the address, like every Deck request). A fresh "t" makes every frame new.
   function snapshotUrl(id) {
-    const q = new URLSearchParams({ path: `camera_proxy/${id}`, t: String(Date.now()) });
+    const q = new URLSearchParams({ path: `camera_proxy/${id}`, w: '640', t: String(Date.now()) });
     if (Deck.code) q.set('c', Deck.code);
     return `/api/home?${q}`;
   }
@@ -693,7 +699,7 @@
     dom.cam.hint.textContent = 'Pinch to move camera';
     setMoveMode(false);
     renderCamControls();
-    openView('camera', displayName(id));
+    openView('camera', camName(id));
     paintCamStatus();
     state.cam.ticker = setInterval(paintCamStatus, 500);
     camLoop();
@@ -823,8 +829,9 @@
 
   function renderCamControls() {
     const cam = state.cam;
-    const ids = state.camLinks.get(cam.id) || [];
-    const camName = displayName(cam.id);
+    // Hide settings Home Assistant marks unavailable (ONVIF adds some a camera may not have).
+    const ids = (state.camLinks.get(cam.id) || []).filter((e) => state.entities.get(e)?.state !== 'unavailable');
+    const name = camName(cam.id);
     if (!ids.length) {
       const p = document.createElement('p');
       p.className = 'cam-empty';
@@ -838,7 +845,7 @@
       b.className = 'key focusable';
       b.dataset.key = id;
       b.innerHTML = `${icon(controlIcon(id))}<span class="key-label"></span><span class="key-state"></span>`;
-      b.querySelector('.key-label').textContent = stripShared(displayName(id), camName);
+      b.querySelector('.key-label').textContent = stripShared(displayName(id), name);
       b._select = () => camControl(id);
       return b;
     });
@@ -848,7 +855,8 @@
 
   function refreshCamControls() {
     for (const b of dom.cam.controls.querySelectorAll('.key')) {
-      const s = entityStatus(b.dataset.key);
+      const st = state.entities.get(b.dataset.key)?.state;
+      const s = st === 'unknown' ? { text: 'Pinch to set', on: false } : entityStatus(b.dataset.key);
       b.querySelector('.key-state').textContent = s.text;
       b.classList.toggle('is-on', !!s.on);
       b.classList.toggle('is-unavailable', !!s.na);
@@ -858,7 +866,7 @@
 
   async function camControl(id) {
     const s = state.entities.get(id);
-    if (!s || s.state === 'unavailable' || s.state === 'unknown') { toast('Setting unavailable', true); return; }
+    if (!s || s.state === 'unavailable') { toast('Setting unavailable', true); return; }
     if (domainOf(id) === 'select') {
       const opts = s.attributes?.options || [];
       const i = opts.indexOf(s.state);
