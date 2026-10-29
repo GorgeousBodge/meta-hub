@@ -60,17 +60,20 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const upstream = await fetch(`${NABU_CASA_URL.trim().replace(/\/+$/, '')}/api/${path}`, {
+    // Pictures: ask Home Assistant for a glasses-sized image (ignored by cameras that can't resize).
+    const w = Number(req.query.w);
+    const qs = kind === 'image' && Number.isInteger(w) && w >= 160 && w <= 1920 ? `?width=${w}` : '';
+    const upstream = await fetch(`${NABU_CASA_URL.trim().replace(/\/+$/, '')}/api/${path}${qs}`, {
       method: req.method,
       headers: { Authorization: `Bearer ${HA_TOKEN.trim()}`, 'Content-Type': 'application/json' },
       body: req.method === 'POST' ? JSON.stringify(req.body ?? {}) : undefined,
-      signal: AbortSignal.timeout(kind === 'image' ? 8000 : 15000),
+      signal: AbortSignal.timeout(kind === 'image' ? 20000 : 15000),
     });
 
     if (upstream.status === 401) return send(res, 502, { error: 'Home Assistant rejected the token' });
 
     if (kind === 'image') {
-      if (!upstream.ok) return send(res, 502, { error: 'Camera image unavailable' });
+      if (!upstream.ok) return send(res, 502, { error: `Home Assistant couldn’t get a picture (${upstream.status})` });
       const buf = Buffer.from(await upstream.arrayBuffer());
       res.status(200);
       res.setHeader('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
@@ -83,6 +86,9 @@ module.exports = async (req, res) => {
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json');
     return res.send(text);
   } catch (err) {
+    if (err && err.name === 'TimeoutError') {
+      return send(res, 504, { error: kind === 'image' ? 'The camera took too long to send a picture' : 'Home Assistant took too long to answer' });
+    }
     return send(res, 502, { error: 'Can’t reach Home Assistant' });
   }
 };
