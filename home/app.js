@@ -642,23 +642,46 @@
   /* ---------------------------------------------------------------------
      Camera: picture refreshed every second, move mode, settings buttons
      --------------------------------------------------------------------- */
-  // Image fetch: the access code goes in the URL, like every Deck request.
-  async function fetchSnapshot(id) {
-    if (DEMO) return demo.snapshot(id);
-    const q = new URLSearchParams({ path: `camera_proxy/${id}` });
+  // Each frame loads as an ordinary image from /api/home (the access code is in
+  // the address, like every Deck request). A fresh "t" makes every frame new.
+  function snapshotUrl(id) {
+    const q = new URLSearchParams({ path: `camera_proxy/${id}`, t: String(Date.now()) });
     if (Deck.code) q.set('c', Deck.code);
-    const res = await fetch(`/api/home?${q}`, { cache: 'no-store' });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const err = new Error(data.error || `Camera error (${res.status})`);
-      err.status = res.status;
-      if (res.status === 401 && data.locked) {
-        err.locked = true;
-        Deck.lock(Deck.code ? 'Wrong access code' : 'Access code needed');
-      }
-      throw err;
+    return `/api/home?${q}`;
+  }
+
+  // Load off-screen, then swap in, so a failed frame never blanks the last good one.
+  function loadFrame(src) {
+    return new Promise((resolve, reject) => {
+      const next = new Image();
+      next.alt = '';
+      next.onload = () => {
+        const shown = dom.cam.img;
+        next.id = shown.id;
+        shown.replaceWith(next);
+        dom.cam.img = next;
+        resolve();
+      };
+      next.onerror = () => reject(new Error('frame'));
+      next.src = src;
+    });
+  }
+
+  // A frame failed: ask the server why, so the screen can say something useful.
+  async function frameError(url) {
+    let res;
+    try {
+      res = await fetch(url, { headers: { Accept: 'application/json' } });
+    } catch {
+      return { message: 'Can’t reach the server' };
     }
-    return res.blob();
+    const data = await res.json().catch(() => null);
+    if (res.status === 401 && data?.locked) {
+      Deck.lock(Deck.code ? 'Wrong access code' : 'Access code needed');
+      return { message: 'Locked · enter the access code', locked: true };
+    }
+    if (!res.ok) return { message: data?.error || `Camera error (${res.status})` };
+    return { message: 'The camera sent a picture the glasses can’t show' };
   }
 
   function openCamera(id) {
@@ -691,25 +714,41 @@
     if (!cam || state.view !== 'camera') return;
     if (document.hidden || Deck.locked) { cam.timer = setTimeout(camLoop, 1000); return; }
     const started = performance.now();
-    fetchSnapshot(cam.id)
-      .then((blob) => {
-        if (state.cam !== cam) return;
+    let job;
+    if (DEMO) {
+      job = demo.snapshot(cam.id).then((blob) => {
         const url = URL.createObjectURL(blob);
-        dom.cam.img.src = url;
-        if (cam.url) URL.revokeObjectURL(cam.url);
-        cam.url = url;
+        return loadFrame(url).finally(() => {
+          if (cam.url) URL.revokeObjectURL(cam.url);
+          cam.url = url;
+        });
+      });
+    } else {
+      const url = snapshotUrl(cam.id);
+      job = loadFrame(url).catch(async () => {
+        const why = await frameError(url);
+        const err = new Error(why.message);
+        err.locked = why.locked;
+        throw err;
+      });
+    }
+    job
+      .then(() => {
+        if (state.cam !== cam) return;
         cam.lastOk = Date.now();
         cam.error = '';
       })
       .catch((err) => {
         if (state.cam !== cam) return;
         console.warn(err);
-        cam.error = err.locked ? friendlyError(err) : (err.message || 'No picture');
+        cam.error = err.message || 'No picture';
       })
       .finally(() => {
         if (state.cam !== cam || state.view !== 'camera') return;
         paintCamStatus();
-        const wait = Math.max(150, CONFIG.cameraRefreshMs - (performance.now() - started));
+        // After an error, wait a little longer before trying again.
+        const gap = cam.error ? Math.max(3000, CONFIG.cameraRefreshMs) : CONFIG.cameraRefreshMs;
+        const wait = Math.max(150, gap - (performance.now() - started));
         cam.timer = setTimeout(camLoop, wait);
       });
   }
