@@ -124,5 +124,8 @@ module.exports = async (req, res) => {
   const results = hasNumber
     ? [...pcs, ...addrs.slice(0, 6), ...placesOnly.slice(0, 4)]
     : [...pcs, ...placesOnly.slice(0, 7), ...addrs.slice(0, 3)];
-  send(res, 200, { results: results.slice(0, 10), addresses: !!akey }, 3600);
+  // addressError explains a failed address lookup (shown by /api/nav/geocode in a browser).
+  // A failed lookup is only cached for a minute, so a fixed key takes effect straight away.
+  const addressError = addrRes.status === 'rejected' ? String((addrRes.reason && addrRes.reason.message) || 'failed') : undefined;
+  send(res, 200, { results: results.slice(0, 10), addresses: !!akey, addressError }, addressError || !akey ? 60 : 3600);
 };
