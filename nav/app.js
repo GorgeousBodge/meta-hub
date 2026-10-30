@@ -372,7 +372,7 @@ function fillDestList(note) {
     if (!items.length) return;
     html += `<div class="sec">// ${esc(title)}</div>`;
     for (const p of items) {
-      const d = S.pos ? fmtDist(haversine(S.pos, p)) : '';
+      const d = S.pos && p.lat != null ? fmtDist(haversine(S.pos, p)) : '';
       html += row('pickDest', ico, p.name, p.sub || '', d, { attrs: `data-i="${S.choices.length}" ${first ? 'data-focus' : ''}` });
       S.choices.push(p);
       first = false;
@@ -485,14 +485,34 @@ function updateMapKey() {
   if (b) b.querySelector('.key-label').textContent = MAP_LABEL[S.mapMode];
 }
 
+// Address suggestions (aid, no coordinates yet): fetch the full address once, when picked. That uses
+// one lookup, so the result is copied into the search results, Recent and Saved, and never asked for again.
+async function resolveAddress(dest) {
+  const j = await api('address', { id: dest.aid });
+  Object.assign(dest, { name: j.name || dest.name, sub: j.sub || dest.sub, lat: j.lat, lon: j.lon });
+  const fill = (x) => (x && x.aid === dest.aid ? { ...x, name: dest.name, sub: dest.sub, lat: dest.lat, lon: dest.lon } : x);
+  S.results = (S.results || []).map(fill);
+  for (const k of ['saved', 'recent']) {
+    const list = store.get(k, []);
+    if (list.some((x) => x && x.aid === dest.aid)) store.set(k, list.map(fill));
+  }
+}
+
 // ---------------- route preview
 async function preview() {
   setHeader('Route', S.dest ? S.dest.name : '');
   setHints(HINTS.list);
   if (!S.dest) return goHome();
   const gen = S.gen;
-  app.innerHTML = loading('Getting location');
+  const needsAddress = S.dest.aid && S.dest.lat == null;
+  app.innerHTML = loading(needsAddress ? 'Finding address' : 'Getting location');
   try {
+    if (needsAddress) {
+      await resolveAddress(S.dest);
+      if (gen !== S.gen) return;
+      setHeader('Route', S.dest.name);
+      stage('Getting location');
+    }
     const pos = await getPos();
     if (gen !== S.gen) return;
     stage('Plotting route');
@@ -1223,7 +1243,7 @@ const ACTIONS = {
   pickDest(d) {
     const p = S.choices[Number(d.i)];
     if (!p) return;
-    S.dest = { name: p.name, lat: p.lat, lon: p.lon };
+    S.dest = p.aid ? { name: p.name, sub: p.sub || '', aid: p.aid, lat: p.lat, lon: p.lon } : { name: p.name, lat: p.lat, lon: p.lon };
     const recent = store.get('recent', []).filter((x) => x.name !== p.name);
     recent.unshift(S.dest);
     store.set('recent', recent.slice(0, 6));
