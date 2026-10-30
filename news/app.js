@@ -33,7 +33,6 @@
   const CONFIG = {
     staleMs: 10 * 60 * 1000, // refetch a section if older than this
     tabFocusDelay: 280,      // ms a tab must stay focused before it loads
-    voiceLang: 'en-GB',
   };
 
   const DEMO = Deck.demo;
@@ -343,36 +342,28 @@
   /* ---------------------------------------------------------------------
      Speech (speechSynthesis — supported on the Display for short content)
      --------------------------------------------------------------------- */
-  const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-  let voice = null;
-  function pickVoice() {
-    if (!canSpeak) return;
-    const voices = speechSynthesis.getVoices();
-    voice = voices.find((v) => v.lang === CONFIG.voiceLang) ||
-            voices.find((v) => v.lang?.startsWith('en')) || null;
-  }
-  if (canSpeak) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
-
+  // Speaking goes through the shared Deck.say (deck/deck.js), which splits long text,
+  // uses the voice chosen on the Voice check screen, and falls back if the glasses refuse it.
   function toggleSpeak(id, text, el) {
-    if (!canSpeak) { toast('Speech isn’t available here', true); return; }
+    if (!Deck.canSpeak) { toast('Speech isn’t available here', true); return; }
     if (state.speakingId === id) { stopSpeaking(); return; }
     stopSpeaking();
     if (!text) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = CONFIG.voiceLang;
-    if (voice) u.voice = voice;
-    u.rate = 1.02;
-    const done = () => { if (state.speakingId === id) stopSpeaking(); };
-    u.onend = done;
-    u.onerror = done;
     state.speakingId = id;
     el?.classList.add('is-speaking');
     if (state.view === 'story') setSpeakLabel(true);
-    speechSynthesis.speak(u);
+    const ok = Deck.say(text, {
+      onend: (done) => {
+        if (state.speakingId !== id) return;
+        stopSpeaking();
+        if (!done) toast('Speech didn’t play · try the Voice check', true);
+      },
+    });
+    if (!ok) stopSpeaking();
   }
 
   function stopSpeaking() {
-    if (canSpeak) speechSynthesis.cancel();
+    Deck.hush();
     state.speakingId = null;
     dom.list.querySelector('.is-speaking')?.classList.remove('is-speaking');
     setSpeakLabel(false);
