@@ -33,4 +33,10 @@ window.DECK_APPS = [
     badge: 'mail/unread',      // unread count on the tile (deck/badges.js)
     badgeLabel: 'unread',
   },
+  {
+    id: 'voice',
+    name: 'Voice',
+    blurb: 'Speech check · choose voice',
+    icon: '<path d="M12 26h8l12-10v32L20 38h-8z" fill="currentColor"/><path d="M40 24a10 10 0 0 1 0 16M46 18a18 18 0 0 1 0 28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+  },
 ];
