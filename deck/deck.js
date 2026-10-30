@@ -13,7 +13,8 @@
      Deck.press(el) / Deck.bump(el) feedback;  Deck.focus(el) / Deck.nearest(...)
      Deck.action(e)                 keydown -> 'up' | 'down' | 'left' | 'right' | 'select' | 'back'
      Deck.store                     localStorage that never throws (namespaced)
-     Deck.say(text)                 text-to-speech through the glasses speaker
+     Deck.say(text, { onend })      text-to-speech through the glasses speaker (Deck.hush() stops)
+     Deck.speech                    saved voice profile, voices list, recent events (see /voice/)
      Deck.toHub()                   back to the launcher, if the app was opened from it
 
    Access code: APP_CODE in Vercel. Open any app once with ?code=YOURCODE (or type
@@ -217,21 +218,150 @@
     return true;
   }
 
-  /* ---------- speech ---------- */
+  /* ---------- speech ----------
+     The glasses support only "a subset" of speechSynthesis, for short content.
+     So Deck.say is deliberately forgiving:
+       - long text is split into short sentences, spoken one after another
+       - cancel() is only called if something is speaking, with a short gap after it
+       - the language/voice comes from a saved profile (set on the Voice check screen,
+         /voice/), and if the engine rejects it, it falls back to the plain default
+       - the first pinch/tap primes speech, so later spoken prompts (Nav guidance)
+         aren't blocked for not coming from a gesture
+     onend is called once when it finishes or fails, but not after Deck.hush(). */
   const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-  function say(text, { lang = 'en-GB', rate = 1, onend } = {}) {
-    if (!canSpeak || !text) return false;
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang;
-      u.rate = rate;
-      if (onend) { u.onend = onend; u.onerror = onend; }
-      speechSynthesis.speak(u);
-      return true;
-    } catch { return false; }
+  const SPEECH_KEY = 'deck.speech';
+  const SPEECH_DEFAULT = { lang: '', voice: '', rate: 1, chunk: 160, gap: 120, label: 'Default' };
+  let speechProfile = { ...SPEECH_DEFAULT, ...(store.get(SPEECH_KEY, {}) || {}) };
+  let speechSeq = 0;
+  let speechLog = [];                  // recent events, shown on the Voice check screen
+  let sessionPlain = false;            // the saved language failed this session: use defaults
+  let primed = false;                  // speech has been started from a pinch at least once
+
+  const logSpeech = (ev) => { speechLog.push({ t: Date.now(), ...ev }); speechLog = speechLog.slice(-20); };
+  const voices = () => { try { return canSpeak ? speechSynthesis.getVoices() || [] : []; } catch { return []; } };
+
+  function splitSpeech(text, max) {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return [];
+    const sentences = clean.match(/[^.!?]+[.!?]*["')\]]*\s*/g) || [clean];
+    const out = [];
+    let buf = '';
+    const push = (piece) => {
+      piece = piece.trim();
+      if (!piece) return;
+      if (piece.length <= max) { out.push(piece); return; }
+      // a very long sentence: break at commas, then at spaces
+      let rest = piece;
+      while (rest.length > max) {
+        let cut = rest.lastIndexOf(', ', max);
+        if (cut < max * 0.4) cut = rest.lastIndexOf(' ', max);
+        if (cut < max * 0.4) cut = max;
+        out.push(rest.slice(0, cut + 1).trim());
+        rest = rest.slice(cut + 1);
+      }
+      if (rest.trim()) out.push(rest.trim());
+    };
+    for (const s of sentences) {
+      if ((buf + s).length > max && buf) { push(buf); buf = ''; }
+      buf += s;
+    }
+    push(buf);
+    return out;
   }
-  const hush = () => { try { if (canSpeak) speechSynthesis.cancel(); } catch { /* ignore */ } };
+
+  function makeUtterance(text, profile, plain) {
+    const u = new SpeechSynthesisUtterance(text);
+    if (!plain) {
+      if (profile.voice) {
+        const v = voices().find((x) => x.voiceURI === profile.voice || x.name === profile.voice);
+        if (v) u.voice = v;
+      }
+      if (profile.lang) u.lang = profile.lang;
+      if (profile.rate && profile.rate !== 1) u.rate = profile.rate;
+    }
+    return u;
+  }
+
+  // say(text, { onend, profile }) — profile overrides the saved one (used by the Voice check)
+  function say(text, { onend, profile: override } = {}) {
+    if (!canSpeak || !text) return false;
+    primed = true;                     // real speech from a pinch primes the engine itself
+    const profile = { ...speechProfile, ...(override || {}) };
+    const chunks = splitSpeech(text, profile.chunk || SPEECH_DEFAULT.chunk);
+    if (!chunks.length) return false;
+    const id = ++speechSeq;
+    let plain = sessionPlain && !override;
+    let i = 0;
+    let finished = false;
+    const finish = (ok, error) => {
+      if (finished || id !== speechSeq) return;
+      finished = true;
+      logSpeech({ ev: ok ? 'end' : 'fail', error, label: profile.label });
+      if (onend) onend(ok);
+    };
+    const speakNext = () => {
+      if (id !== speechSeq) return;
+      if (i >= chunks.length) { finish(true); return; }
+      const u = makeUtterance(chunks[i], profile, plain);
+      let started = false;
+      // Some engines drop an utterance silently: don't leave the UI saying "speaking" forever
+      const watchdog = setTimeout(() => { if (!started && id === speechSeq) { logSpeech({ ev: 'silent', label: profile.label }); finish(false, 'no-start'); } }, 4000);
+      u.onstart = () => { started = true; clearTimeout(watchdog); if (i === 0) logSpeech({ ev: 'start', label: profile.label }); };
+      u.onend = () => { clearTimeout(watchdog); if (id !== speechSeq) return; i += 1; speakNext(); };
+      u.onerror = (e) => {
+        clearTimeout(watchdog);
+        if (id !== speechSeq) return;
+        const err = (e && e.error) || 'error';
+        if (err === 'interrupted' || err === 'canceled') return;
+        // The chosen language or voice isn't supported: retry this chunk plainly
+        if (!plain && !override && (profile.lang || profile.voice || profile.rate !== 1)) {
+          logSpeech({ ev: 'retry-plain', error: err, label: profile.label });
+          plain = true;
+          if (!override) sessionPlain = true;
+          speakNext();
+          return;
+        }
+        finish(false, err);
+      };
+      try { speechSynthesis.speak(u); } catch (e) { clearTimeout(watchdog); finish(false, e.message); }
+    };
+    let busy = false;
+    try { busy = speechSynthesis.speaking || speechSynthesis.pending; } catch { /* ignore */ }
+    if (busy) {
+      try { speechSynthesis.cancel(); } catch { /* ignore */ }
+      setTimeout(speakNext, profile.gap || SPEECH_DEFAULT.gap);   // speak() straight after cancel() is dropped on some engines
+    } else {
+      speakNext();                                                // stays inside the pinch, for engines that need a gesture
+    }
+    return true;
+  }
+
+  function hush() {
+    speechSeq += 1;
+    try { if (canSpeak && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel(); } catch { /* ignore */ }
+  }
+
+  // Prime speech on the first pinch or tap, so speech that isn't started by a gesture
+  // (Nav's turn prompts) is allowed later on engines that require one.
+  // Runs after the app's own handlers (bubble phase), so it only fires when the
+  // pinch didn't already start speech.
+  function prime() {
+    if (primed || !canSpeak) return;
+    primed = true;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch { /* ignore */ }
+  }
+  window.addEventListener('keydown', (e) => { if (e.key === 'Enter') prime(); });
+  window.addEventListener('pointerdown', prime);
+
+  const speech = {
+    get profile() { return { ...speechProfile }; },
+    setProfile(p) { speechProfile = { ...SPEECH_DEFAULT, ...p }; sessionPlain = false; store.set(SPEECH_KEY, speechProfile); },
+    resetProfile() { speechProfile = { ...SPEECH_DEFAULT }; sessionPlain = false; store.del(SPEECH_KEY); },
+    voices,
+    get log() { return speechLog.slice(); },
+    get speaking() { try { return canSpeak && speechSynthesis.speaking; } catch { return false; } },
+    split: splitSpeech,
+  };
 
   /* ---------- lock screen ----------
      Shown when the server answers 401 { locked: true }. The code is checked
@@ -358,7 +488,7 @@
     toast, press, bump,
     KEYS, action, focus, nearest,
     toHub,
-    canSpeak, say, hush,
+    canSpeak, say, hush, speech,
     esc: escHtml,
   };
 })();
