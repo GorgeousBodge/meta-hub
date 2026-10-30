@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/34202193/README.md)
 # Nav Deck
 
 Walking and cycling directions with live train and bus times for **Meta Ray-Ban Display** glasses. Turn-by-turn guidance on OpenStreetMap, a street map you can flick to for a sense of distance, and live departure boards for any station or bus stop in Great Britain. Built for the Display's 600×600 screen and the Neural Band.
@@ -43,8 +44,16 @@ All three have free plans.
 2. Copy the **app ID** and **app key** from **My Apps**. You don't need the app name.
 3. The free plan allows **30 requests a day**, so the bus screen only checks when you press **Refresh**.
 
+**House-number search: Ideal Postcodes (optional, pay as you go)**
+
+Without this, house numbers come from OpenStreetMap, which only has some UK addresses. With it, search also suggests every UK address from Royal Mail's address file.
+1. Sign up at [ideal-postcodes.co.uk](https://ideal-postcodes.co.uk). The free trial includes 200 lookups for a month (Ideal Postcodes says trial balances are for testing and evaluation only).
+2. Copy your **API key** (it starts `ak_`).
+3. Suggestions while you search are free. A lookup is used only when you pick an address, and the app keeps that address's location afterwards, so picking it again later costs nothing.
+4. After the trial, buy a small pay-as-you-go bundle (lookups last 12 months). Turn off automatic top-ups if you'd rather approve each purchase.
+
 ### Add them to Vercel
-Add `ORS_API_KEY`, `RAILDATA_API_KEY`, `TRANSPORTAPI_APP_ID` and `TRANSPORTAPI_APP_KEY` (plus the optional `RAILDATA_DEPARTURES_URL` and `BUS_REFRESH_SECONDS`) as listed in the [main README](../README.md#environment-variables), then redeploy.
+Add `ORS_API_KEY`, `RAILDATA_API_KEY`, `TRANSPORTAPI_APP_ID` and `TRANSPORTAPI_APP_KEY` (plus the optional `IDEAL_POSTCODES_KEY`, `RAILDATA_DEPARTURES_URL` and `BUS_REFRESH_SECONDS`) as listed in the [main README](../README.md#environment-variables), then redeploy.
 
 ### Check it
 Open `https://YOUR-PROJECT.vercel.app/api/status?c=YOUR-CODE` and look for `"set": true` on each key and `"strippedChars": false` (if `true`, stray characters such as spaces were removed: fine unless the key then stops working). Then try `https://YOUR-PROJECT.vercel.app/api/nav/trains?crs=GLD&c=YOUR-CODE` for a live Guildford board.
@@ -102,7 +111,7 @@ stops: [
 ## Search tips
 - **Postcodes** are the most precise way to find a house: `GU1 4AA`, or `12 North Street GU1 4AA`. An area code on its own, such as `GU1`, takes you to the middle of that area.
 - **Places and streets** work well: "Guildford Cathedral", "Woodbridge Road".
-- **House numbers** are hit and miss. They come from OpenStreetMap, where only some UK addresses are mapped. If one isn't found, add the postcode.
+- **House numbers:** with `IDEAL_POSTCODES_KEY` set, type the number and street ("12 North Street"), and addresses appear first, marked **address**. Adding the town or postcode narrows it down. Without the key, house numbers come from OpenStreetMap, where only some UK addresses are mapped: if one isn't found, add the postcode.
 - Results nearest to you come first, and you can search anywhere in Great Britain.
 
 ---
@@ -111,6 +120,7 @@ stops: [
 
 - **Server:** all of Nav's endpoints run in one Vercel function, `api/nav/[op].js`, which hands each request to a handler in `api/_lib/nav/`.
 - **Directions and search:** `route.js` and `geocode.js` call openrouteservice, which uses OpenStreetMap data. Postcodes go to [postcodes.io](https://postcodes.io), which uses official ONS data and needs no key.
+- **Addresses:** with `IDEAL_POSTCODES_KEY` set, `geocode.js` also asks Ideal Postcodes for address suggestions (free). Picking one calls `address.js`, which uses one lookup to get the full address and its location. That answer is cached for 30 days at Vercel's edge, and the app stores the location with the place, so each address is paid for once.
 - **Street map:** `nav/streetmap.js` draws OpenStreetMap roads from [OpenFreeMap](https://openfreemap.org) with MapLibre, restyled for the glasses: black is see-through on the Display, so roads are drawn as light and your route is brightest. It loads only the first time you switch to it. If the glasses can't run it (it needs WebGL), the app says so and stays on the route-line view.
 - **Nearby stations and stops:** `nearby.js` asks OpenStreetMap (Overpass) for stations within 25 km and bus stops within 700 m. Results are cached for a day.
 - **Trains:** `trains.js` uses National Rail's Darwin feed through Rail Data Marketplace. Cached for 20 seconds.
