@@ -81,7 +81,7 @@
   // Never offered as one-pinch buttons.
   const CAMERA_EXCLUDE = /siren|alarm|reboot|restart|format|reset|update|wiper|autofocus/i;
   // Most useful first; at most six fit under the picture.
-  const CONTROL_ORDER = [/privacy/i, /infrared|night|(^|[._])ir([._]|$)/i, /human|person|motion|detect/i, /tracking/i, /light|led|spot/i];
+  const CONTROL_ORDER = [/privacy/i, /infrared|night|(^|[._])ir([._]|$)/i, /human|person|motion|detect|picture_change/i, /tracking/i, /light|led|spot/i];
   const controlRank = (id) => { const i = CONTROL_ORDER.findIndex((r) => r.test(id)); return i < 0 ? 99 : i; };
   const TOGGLEABLE = ['light', 'switch', 'fan'];
 
@@ -194,8 +194,13 @@
     state.camLinks = new Map(cams.map((id) => {
       const row = rowFor(id);
       const device = row.device || [];
-      const near = (row.area || []).filter((e) => CAMERA_WORDS.test(e) && !device.includes(e));
-      const ids = [...new Set([...(CONFIG.cameraControls[id] || []), ...device, ...near])]
+      const area = row.area || [];
+      const near = area.filter((e) => CAMERA_WORDS.test(e) && !device.includes(e));
+      // Fill spare slots with the other settings from the same camera device: entities
+      // whose id starts like a matched one (e.g. switch.8d03c8apaz31392_flip_image).
+      const prefixes = new Set(near.map((e) => e.split('.')[1].split('_')[0]).filter((p) => p.length >= 6 && /\d/.test(p)));
+      const siblings = area.filter((e) => !near.includes(e) && !device.includes(e) && prefixes.has(e.split('.')[1].split('_')[0]));
+      const ids = [...new Set([...(CONFIG.cameraControls[id] || []), ...device, ...near, ...siblings])]
         .filter((e) => state.entities.has(e) && !CAMERA_EXCLUDE.test(e))
         .sort((a, b) => controlRank(a) - controlRank(b))
         .slice(0, 6);
@@ -286,7 +291,8 @@
     const s = state.entities.get(id);
     let name = s?.attributes?.friendly_name || id.split('.')[1].replace(/_/g, ' ');
     // Devices named after a serial number ("8D03C8APAZ31392 Privacy mode"): keep the useful part.
-    const serial = /^(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{8,}\s+(.+)$/.exec(name);
+    // Upper-case serials, allowing "-" and a channel number after it ("8D03… 1 Privacy mode").
+    const serial = /^(?=[^\s]*\d)(?=[^\s]*[A-Z])[A-Z0-9-]{10,}(?:[\s_-]+\d{1,2})?[\s:_-]+(.+)$/.exec(name.trim());
     if (serial) name = serial[1].charAt(0).toUpperCase() + serial[1].slice(1);
     if (areaName && name.toLowerCase().startsWith(`${areaName.toLowerCase()} `)) {
       const rest = name.slice(areaName.length).trim();
