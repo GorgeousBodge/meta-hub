@@ -31,6 +31,7 @@ module.exports = (req, res) => {
       mail: { ready: mailNeeds.length === 0, ai: has('ANTHROPIC_API_KEY'), needs: mailNeeds },
       nav: {
         ready: has('ORS_API_KEY'),
+        addresses: has('IDEAL_POSTCODES_KEY'),
         trains: has('RAILDATA_API_KEY'),
         buses: has('TRANSPORTAPI_APP_ID') && has('TRANSPORTAPI_APP_KEY'),
         needs: missing('ORS_API_KEY', 'RAILDATA_API_KEY', 'TRANSPORTAPI_APP_ID', 'TRANSPORTAPI_APP_KEY'),
@@ -43,6 +44,7 @@ module.exports = (req, res) => {
       ANTHROPIC_API_KEY: key('ANTHROPIC_API_KEY'),
       NEWS_MODEL: { set: has('NEWS_MODEL'), note: 'optional' },
       ORS_API_KEY: key('ORS_API_KEY'),
+      IDEAL_POSTCODES_KEY: { ...key('IDEAL_POSTCODES_KEY'), note: 'optional: house-number address search in Nav' },
       RAILDATA_API_KEY: key('RAILDATA_API_KEY'),
       RAILDATA_DEPARTURES_URL: { set: has('RAILDATA_DEPARTURES_URL'), note: 'optional' },
       TRANSPORTAPI_APP_ID: key('TRANSPORTAPI_APP_ID'),
