@@ -366,7 +366,9 @@
     const parts = [`From ${senderName(m.from)}.`, `${m.subject}.`];
     if (m.summaryText) parts.push(`Summary: ${m.summaryText}`, m.actionText ? `${m.actionText}.` : '', 'The message:');
     parts.push(String(m.text || '').slice(0, SPEAK_MAX));
-    const ok = Deck.say(parts.filter(Boolean).join(' '), { onend: () => setSpeaking(false) });
+    const ok = Deck.say(parts.filter(Boolean).join(' '), {
+      onend: (done) => { setSpeaking(false); if (!done) Deck.toast('Speech didn’t play · try the Voice check', { error: true }); },
+    });
     setSpeaking(!!ok);
   }
 
