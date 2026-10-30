@@ -72,15 +72,11 @@ function bearing(a, b) {
 const toast = (msg, ms = 2600, isError = false) => Deck.toast(msg, { ms, error: isError });
 
 // ---------------------------------------------------------------- speech
-function say(text, lang = 'en-GB') {
-  if (!S.voice || !text || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.onerror = (e) => { if (lang !== 'en-US' && e.error === 'synthesis-failed') say(text, 'en-US'); };
-    speechSynthesis.speak(u);
-  } catch { /* speech is optional */ }
+// Spoken prompts go through the shared Deck.say (deck/deck.js): short chunks, the voice chosen
+// on the Voice check screen, and a fallback if the glasses refuse it.
+function say(text) {
+  if (!S.voice || !text) return;
+  Deck.say(text);
 }
 
 // ---------------------------------------------------------------- server calls
@@ -675,7 +671,7 @@ function stopGuidance() {
   if (S.sim) { clearInterval(S.sim); S.sim = null; }
   if (S.poll) { clearInterval(S.poll); S.poll = null; S.polling = false; }
   stopCompass();
-  try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch { /* ignore */ }
+  Deck.hush();
 }
 
 function progress() {
@@ -1266,7 +1262,7 @@ const ACTIONS = {
     S.voice = !S.voice;
     store.set('voice', S.voice);
     setKeyOn(b, S.voice);
-    if (!S.voice) { try { speechSynthesis.cancel(); } catch { /* ignore */ } } else say('Voice on');
+    if (!S.voice) Deck.hush(); else say('Voice on');
   },
   async toggleCompass(d, b) {
     if (S.compass) {
