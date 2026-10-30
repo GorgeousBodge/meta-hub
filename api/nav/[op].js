@@ -2,6 +2,7 @@
 // well inside the Hobby plan's 12-function limit.
 //   /api/nav/route    walking / cycling directions (openrouteservice)
 //   /api/nav/geocode  place, street and postcode search
+//   /api/nav/address  full address + location for a picked address suggestion (Ideal Postcodes)
 //   /api/nav/reverse  nearest address to a point
 //   /api/nav/nearby   stations and bus stops near you (OpenStreetMap)
 //   /api/nav/trains   live departures (Rail Data Marketplace)
@@ -12,6 +13,7 @@ const { send } = require('../_lib/common.js');
 const HANDLERS = {
   route: require('../_lib/nav/route.js'),
   geocode: require('../_lib/nav/geocode.js'),
+  address: require('../_lib/nav/address.js'),
   reverse: require('../_lib/nav/reverse.js'),
   nearby: require('../_lib/nav/nearby.js'),
   trains: require('../_lib/nav/trains.js'),
