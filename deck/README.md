@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/34200028/README.md)
 # deck/ — the shared toolkit
 
 Everything the apps have in common, so a new app only has to contain its own idea. When you ask Claude (or anyone) to build a new app, share **this file**, **`starter/index.html`** and **`starter/app.js`**: that's enough to build one that fits in, without reading the other apps.
@@ -73,7 +74,9 @@ The clock runs by itself.
 ### Other
 | Call | Does |
 |---|---|
-| `Deck.say(text, { lang, rate, onend })` | Speak through the glasses speaker (cancels anything already speaking). `Deck.hush()` stops it |
+| `Deck.say(text, { onend })` | Speak through the glasses speaker. Splits long text into short sentences, uses the voice saved on the Voice check screen (`/voice/`), and falls back to the plain voice if the glasses refuse it. `onend(ok)` runs once when it finishes or fails (not after `Deck.hush()`). Start speech from a pinch where you can. **Never call `speechSynthesis` directly** |
+| `Deck.hush()` | Stop speaking |
+| `Deck.speech` | `.profile`, `.setProfile()`, `.resetProfile()`, `.voices()`, `.log` (recent events): used by the Voice check |
 | `Deck.store.get(key, fallback)` / `.set(key, value)` / `.del(key)` | `localStorage` with JSON, which never throws. **Prefix your keys** with your app id (`services.saved`): every app shares this storage |
 | `Deck.esc(text)` | Escape text for `innerHTML`. Prefer `textContent` for anything from the server |
 
