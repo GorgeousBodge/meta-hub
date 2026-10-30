@@ -64,25 +64,34 @@
   const DOMAIN_ICON = { light: 'bulb', switch: 'plug', fan: 'fan', climate: 'thermo', camera: 'cam', scene: 'scene', script: 'run' };
 
   // For each camera: switches/selects on the same device, and in the same area.
+  // For each camera: switches/selects and PTZ buttons on the same device and in the
+  // same area, and whether it's hidden in Home Assistant (hidden cameras aren't shown).
   const CAMERA_TEMPLATE =
     `{% set ns = namespace(out=[]) %}` +
     `{% for c in states.camera %}` +
     `{% set d = device_id(c.entity_id) %}{% set a = area_id(c.entity_id) %}` +
-    `{% set same = (device_entities(d) if d else []) | select('match', '(switch|select)[.]') | list %}` +
-    `{% set near = (area_entities(a) if a else []) | select('match', '(switch|select)[.]') | list %}` +
-    `{% set ns.out = ns.out + [{'id': c.entity_id, 'device': same, 'area': near}] %}` +
+    `{% set dev = device_entities(d) if d else [] %}{% set near = area_entities(a) if a else [] %}` +
+    `{% set ns.out = ns.out + [{'id': c.entity_id, 'hidden': is_hidden_entity(c.entity_id),` +
+    ` 'device': dev | select('match', '(switch|select)[.]') | list,` +
+    ` 'area': near | select('match', '(switch|select)[.]') | list,` +
+    ` 'ptz': (dev + near) | select('match', 'button[.].*ptz') | unique | list}] %}` +
     `{% endfor %}{{ ns.out | tojson }}`;
   // Area matches only count if the name sounds like a camera setting.
   const CAMERA_WORDS = /privacy|infrared|night|(^|[._])ir([._]|$)|motion|detect|human|person|spotlight|white_light|tracking|indicator|status_?led|camera|cam/i;
   // Never offered as one-pinch buttons.
-  const CAMERA_EXCLUDE = /siren|alarm|reboot|restart|format|reset|update/i;
+  const CAMERA_EXCLUDE = /siren|alarm|reboot|restart|format|reset|update|wiper|autofocus/i;
+  // Most useful first; at most six fit under the picture.
+  const CONTROL_ORDER = [/privacy/i, /infrared|night|(^|[._])ir([._]|$)/i, /human|person|motion|detect/i, /tracking/i, /light|led|spot/i];
+  const controlRank = (id) => { const i = CONTROL_ORDER.findIndex((r) => r.test(id)); return i < 0 ? 99 : i; };
   const TOGGLEABLE = ['light', 'switch', 'fan'];
 
   // One REST call returns every area with its relevant entities.
   const AREA_TEMPLATE =
     `{% set ns = namespace(out=[]) %}` +
     `{% for a in areas() %}` +
-    `{% set e = area_entities(a) | select('match', '(${CONFIG.domains.join('|')})[.]') | list %}` +
+    `{% set f = namespace(l=[]) %}` +
+    `{% for x in area_entities(a) %}{% if x is match('(${CONFIG.domains.join('|')})[.]') and not is_hidden_entity(x) %}{% set f.l = f.l + [x] %}{% endif %}{% endfor %}` +
+    `{% set e = f.l %}` +
     `{% if e | count > 0 %}{% set ns.out = ns.out + [{'id': a, 'name': area_name(a), 'entities': e}] %}{% endif %}` +
     `{% endfor %}{{ ns.out | tojson }}`;
 
@@ -125,7 +134,9 @@
     homeFocus: null,
     lastError: '',
     detail: null, // { id, model, value, lockUntil, timer }
-    cameras: [],          // camera entity ids
+    cameras: [],          // camera entity ids (hidden ones left out)
+    hiddenCams: new Set(),
+    camPtzButtons: new Map(), // camera id -> { up, down, left, right } button ids
     camLinks: new Map(),  // camera id -> [switch/select ids]
     cam: null,            // the camera being viewed
   };
@@ -161,9 +172,9 @@
   }
 
   async function fetchCameras() {
-    state.cameras = [...state.entities.keys()].filter((id) => domainOf(id) === 'camera');
+    let cams = [...state.entities.keys()].filter((id) => domainOf(id) === 'camera');
     let rows = [];
-    if (state.cameras.length) {
+    if (cams.length) {
       try {
         if (DEMO) rows = demo.cameraLinks();
         else {
@@ -174,20 +185,37 @@
         console.warn('Camera control lookup failed; using CONFIG.cameraControls only.', err);
       }
     }
-    state.camLinks = new Map(state.cameras.map((id) => {
-      const row = (Array.isArray(rows) ? rows : []).find((r) => r.id === id) || {};
+    rows = Array.isArray(rows) ? rows : [];
+    const rowFor = (id) => rows.find((r) => r.id === id) || {};
+    state.hiddenCams = new Set(cams.filter((id) => rowFor(id).hidden));
+    cams = cams.filter((id) => !state.hiddenCams.has(id));
+    state.cameras = cams;
+
+    state.camLinks = new Map(cams.map((id) => {
+      const row = rowFor(id);
       const device = row.device || [];
       const near = (row.area || []).filter((e) => CAMERA_WORDS.test(e) && !device.includes(e));
       const ids = [...new Set([...(CONFIG.cameraControls[id] || []), ...device, ...near])]
         .filter((e) => state.entities.has(e) && !CAMERA_EXCLUDE.test(e))
-        .slice(0, 8);
+        .sort((a, b) => controlRank(a) - controlRank(b))
+        .slice(0, 6);
       return [id, ids];
+    }));
+
+    // PTZ buttons (e.g. Imou "PTZ up"): used for moving instead of ONVIF when present.
+    state.camPtzButtons = new Map(cams.map((id) => {
+      const map = {};
+      for (const b of rowFor(id).ptz || []) {
+        const m = /ptz[_\s]*(up|down|left|right)/i.exec(b);
+        if (m && state.entities.has(b) && !map[m[1].toLowerCase()]) map[m[1].toLowerCase()] = b;
+      }
+      return [id, map];
     }));
   }
 
   function fallbackAreas() {
     const labels = { light: 'Lights', switch: 'Switches', fan: 'Fans', climate: 'Heating', camera: 'Cameras', scene: 'Scenes', script: 'Scripts' };
-    const ids = [...state.entities.keys()];
+    const ids = [...state.entities.keys()].filter((id) => !state.hiddenCams?.has(id));
     return CONFIG.domains
       .map((d) => ({ id: `_${d}`, name: labels[d], entities: ids.filter((id) => id.startsWith(`${d}.`)) }))
       .filter((a) => a.entities.length);
@@ -257,6 +285,9 @@
   function displayName(id, areaName) {
     const s = state.entities.get(id);
     let name = s?.attributes?.friendly_name || id.split('.')[1].replace(/_/g, ' ');
+    // Devices named after a serial number ("8D03C8APAZ31392 Privacy mode"): keep the useful part.
+    const serial = /^(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{8,}\s+(.+)$/.exec(name);
+    if (serial) name = serial[1].charAt(0).toUpperCase() + serial[1].slice(1);
     if (areaName && name.toLowerCase().startsWith(`${areaName.toLowerCase()} `)) {
       const rest = name.slice(areaName.length).trim();
       if (rest) name = rest.charAt(0).toUpperCase() + rest.slice(1);
@@ -809,8 +840,10 @@
     if (dir === 'right') data.pan = 'RIGHT';
     if (dir === 'up') data.tilt = 'UP';
     if (dir === 'down') data.tilt = 'DOWN';
+    const btn = state.camPtzButtons?.get(cam.id)?.[dir];
     try {
-      await callService('onvif', 'ptz', data);
+      if (btn) await callService('button', 'press', { entity_id: btn });
+      else await callService('onvif', 'ptz', data);
       setTimeout(() => { if (state.cam === cam) { clearTimeout(cam.timer); camLoop(); } }, CONFIG.ptzDuration * 1000 + 150);
     } catch (err) {
       console.error(err);
