@@ -21,7 +21,9 @@ const ENTITY_DOMAINS = new Set([
 ]);
 // Actions may be called in these domains (homeassistant.toggle, onvif.ptz…),
 // but only ever on devices from ENTITY_DOMAINS.
-const SERVICE_DOMAINS = new Set([...ENTITY_DOMAINS, 'homeassistant', 'onvif']);
+const SERVICE_DOMAINS = new Set([...ENTITY_DOMAINS, 'homeassistant', 'onvif', 'button']);
+// Buttons can do anything (restart, format…), so only camera PTZ buttons are allowed.
+const isPtzButton = (id) => /^button\.[a-z0-9_]*ptz_?(up|down|left|right)[a-z0-9_]*$/.test(id);
 const BROAD_TARGETS = ['target', 'area_id', 'device_id', 'floor_id', 'label_id'];
 
 function route(method, path) {
@@ -33,7 +35,7 @@ function route(method, path) {
   return null;
 }
 
-function serviceBodyAllowed(body) {
+function serviceBodyAllowed(body, service) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
   if (BROAD_TARGETS.some((k) => k in body)) return false;
   const ids = [].concat(body.entity_id ?? []);
@@ -41,7 +43,7 @@ function serviceBodyAllowed(body) {
   return ids.every((id) =>
     typeof id === 'string' &&
     /^[a-z_]+\.[a-z0-9_]+$/.test(id) && // rejects "all"
-    ENTITY_DOMAINS.has(id.split('.')[0]));
+    (ENTITY_DOMAINS.has(id.split('.')[0]) || (isPtzButton(id) && /^services\/(button|homeassistant)\//.test(service))));
 }
 
 module.exports = async (req, res) => {
@@ -55,7 +57,7 @@ module.exports = async (req, res) => {
 
   const path = String(req.query.path || '');
   const kind = route(req.method, path);
-  if (!kind || (kind === 'service' && !serviceBodyAllowed(req.body))) {
+  if (!kind || (kind === 'service' && !serviceBodyAllowed(req.body, path))) {
     return send(res, 403, { error: 'Not allowed' });
   }
 
