@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/34202157/README.md)
 # Deck
 
 Web apps for **Meta Ray-Ban Display** glasses, all in one repo and one Vercel project. Each app is built for the Display's 600×600 screen and the Neural Band (swipe to move, pinch to select), and they share one look: a dark HUD in cyan and amber, Chakra Petch and corner brackets.
@@ -63,6 +64,7 @@ In the project, go to **Settings → Environment Variables** and add these. If y
 | `ANTHROPIC_API_KEY` | News | *Optional.* Turns on AI summaries and the briefing |
 | `NEWS_MODEL` | News | *Optional.* Defaults to `claude-haiku-5-5` |
 | `ORS_API_KEY` | Nav | openrouteservice / HEIGIT key: directions and search |
+| `IDEAL_POSTCODES_KEY` | Nav | *Optional.* Ideal Postcodes key for house-number address search (pay as you go; see [Nav README](nav/README.md)) |
 | `RAILDATA_API_KEY` | Nav | Rail Data Marketplace consumer key: trains |
 | `RAILDATA_DEPARTURES_URL` | Nav | *Optional.* Only if your Live Departure Board address differs from the default |
 | `TRANSPORTAPI_APP_ID` | Nav | TransportAPI app ID: buses |
