@@ -29,6 +29,7 @@ module.exports = (req, res) => {
       news: { ready: true, ai: has('ANTHROPIC_API_KEY') },
       accounts: { ready: accountNeeds.length === 0, storage: storage.configured, google, microsoft, needs: accountNeeds, connectPage: '/connect/' },
       mail: { ready: mailNeeds.length === 0, ai: has('ANTHROPIC_API_KEY'), needs: mailNeeds },
+      calendar: { ready: mailNeeds.length === 0, needs: mailNeeds, tz: raw('CAL_TZ') || 'Europe/London', mainOnly: raw('CAL_MAIN_ONLY') === '1' },
       nav: {
         ready: has('ORS_API_KEY'),
         addresses: has('IDEAL_POSTCODES_KEY'),
@@ -59,7 +60,9 @@ module.exports = (req, res) => {
       OAUTH_REDIRECT_BASE: { set: has('OAUTH_REDIRECT_BASE'), note: 'optional' },
       MAIL_SIGN_OFF: { set: has('MAIL_SIGN_OFF'), note: 'optional' },
       MAIL_ALL_INBOX: { set: has('MAIL_ALL_INBOX'), note: 'optional: 1 = whole inbox, not just Primary / Focused' },
-      BUS_REFRESH_SECONDS: { set: has('BUS_REFRESH_SECONDS'), note: 'optional, paid bus plans only' },
+      CAL_TZ: { set: has('CAL_TZ'), note: 'optional: Calendar time zone, default Europe/London' },
+      CAL_MAIN_ONLY: { set: has('CAL_MAIN_ONLY'), note: 'optional: 1 = only the main calendar on each account' },
+      BUS_REFRESH_SECONDS:{ set: has('BUS_REFRESH_SECONDS'), note: 'optional, paid bus plans only' },
     },
   });
 };
