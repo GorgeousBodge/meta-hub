@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=600, height=600, initial-scale=1, user-scalable=no">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <meta name="referrer" content="no-referrer">
+  <title>Calendar Deck</title>
+  <link rel="icon" href="/calendar/icon-96.png" sizes="96x96" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/deck/style.css">
+  <link rel="stylesheet" href="/calendar/calendar.css">
+</head>
+<body>
+  <div class="frame">
+    <header class="hud">
+      <button class="hud-back focusable" id="hudBack" type="button" aria-label="Back" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="hud-heading">
+        <h1 class="hud-title" id="hudTitle">Calendar</h1>
+        <span class="hud-sub" id="hudSub"></span>
+      </div>
+      <div class="hud-status">
+        <span class="status-dot" id="hudDot" data-status="loading" aria-hidden="true"></span>
+        <span id="hudStatus">Loading</span>
+        <time class="hud-clock" id="hudClock">--:--</time>
+      </div>
+    </header>
+
+    <main class="stage">
+      <!-- Agenda: one day at a time, days as tabs -->
+      <section class="view" id="agenda" aria-label="Agenda">
+        <nav class="tabs" id="tabs" aria-label="Days"></nav>
+        <div class="list cal-list" id="list">
+          <div class="state"><div class="spin"></div><div class="state-msg">Fetching your calendar…</div></div>
+        </div>
+      </section>
+
+      <!-- One event -->
+      <section class="view" id="event" hidden aria-label="Event">
+        <div class="ev-head">
+          <div class="ev-source" id="evSource"></div>
+          <div class="ev-heading" id="evTitle"></div>
+          <div class="ev-whenline" id="evWhen"></div>
+          <div class="ev-status" id="evStatus" hidden></div>
+        </div>
+        <div class="ev-body focusable" id="evBody" tabindex="0" aria-label="Event details">
+          <dl class="ev-facts" id="evFacts"></dl>
+          <div class="ev-notes" id="evNotes" hidden></div>
+        </div>
+        <div class="ev-keys">
+          <button class="key key-speak focusable" id="btnListen" type="button">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+            <span class="key-label" id="btnListenLabel">Listen</span>
+          </button>
+          <button class="key focusable" id="btnNext" type="button">
+            <span class="key-label">Next</span>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="hints" id="hints" aria-hidden="true"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/calendar/demo.js"></script>
+  <script src="/calendar/app.js"></script>
+</body>
+</html>
