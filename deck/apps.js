@@ -34,6 +34,14 @@ window.DECK_APPS = [
     badgeLabel: 'unread',
   },
   {
+    id: 'calendar',
+    name: 'Calendar',
+    blurb: 'Today · next 7 days',
+    icon: '<rect x="10" y="14" width="44" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M10 26h44M22 8v10M42 8v10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="34" y="34" width="12" height="12" rx="2" fill="currentColor"/>',
+    badge: 'calendar/today',   // events left today on the tile (deck/badges.js)
+    badgeLabel: 'left today',
+  },
+  {
     id: 'voice',
     name: 'Voice',
     blurb: 'Speech check · choose voice',
