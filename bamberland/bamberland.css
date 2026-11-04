@@ -1,0 +1,90 @@
+/* Bamberland — app-only styles, loaded after /deck/style.css */
+
+/* The HUD shows the clock only; no live/offline light in a static game */
+#hudDot, #hudStatus { display: none; }
+
+/* --- HUD stats: hearts, small keys, big key, equipped item ------------- */
+.bl-stats { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.bl-stats[hidden], .bl-equip[hidden], .hud-title[hidden] { display: none; }
+.bl-hearts { display: flex; gap: 1px; }
+.bl-heart { width: 24px; height: 24px; }
+.bl-heart-o { fill: none; stroke: var(--warn); stroke-width: 2; filter: drop-shadow(0 0 3px rgba(255, 92, 122, .6)); }
+.bl-heart.empty .bl-heart-o { stroke: rgba(255, 92, 122, .4); filter: none; }
+.bl-heart-f { fill: var(--warn); }
+.bl-keys, .bl-bigkey, .bl-equip {
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--font-display); font-weight: 700; font-size: 18px;
+  color: var(--amber);
+}
+.bl-keys .ico, .bl-bigkey .ico { width: 24px; height: 24px; }
+.bl-bigkey { color: rgba(255, 194, 74, .28); }
+.bl-bigkey.is-on { color: var(--amber); filter: drop-shadow(0 0 4px rgba(255, 194, 74, .7)); }
+.bl-equip {
+  height: 36px; padding: 0 10px 0 8px;
+  border: 1px solid var(--line); border-radius: 8px;
+  color: var(--accent); font-size: 14px; letter-spacing: .1em; text-transform: uppercase;
+}
+.bl-equip .ico { width: 22px; height: 22px; }
+.hud-clock { margin-left: 0; }
+
+/* --- Board ------------------------------------------------------------- */
+.bl-board { position: absolute; inset: 0; width: 600px; height: 504px; display: block; }
+.bl-board[hidden] { display: none; }
+
+/* --- Title screen ------------------------------------------------------ */
+.bl-title {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px var(--pad) var(--pad); gap: 10px;
+}
+.bl-title-art { width: 200px; height: 150px; }
+.bl-lore {
+  max-width: 470px; text-align: center;
+  font-size: 19px; line-height: 1.4; color: var(--dim);
+  min-height: 54px;
+}
+.bl-menu {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  width: 100%; max-width: 480px; margin-top: auto;
+}
+.bl-menu .key { height: 66px; flex-direction: row; }
+.bl-menu .key .key-label { font-size: 16px; }
+.bl-menu .key .ico { font-size: 26px; }
+.bl-menu .bl-sound { grid-column: 1 / -1; height: 52px; color: var(--dim); }
+.bl-menu .bl-sound.key-speak { color: var(--amber); }
+.bl-menu .key:disabled { opacity: .3; }
+
+/* --- Dialogue ---------------------------------------------------------- */
+.bl-dialog {
+  position: absolute; left: 14px; right: 14px; bottom: 12px;
+  min-height: 118px; padding: 14px 18px 30px;
+  background: rgba(0, 0, 0, .9);
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  box-shadow: 0 0 22px rgba(63, 224, 255, .25);
+  z-index: 5;
+}
+.bl-dialog[hidden] { display: none; }
+.bl-dialog::before, .bl-dialog::after {
+  content: ""; position: absolute; width: 22px; height: 22px; border: 0 solid var(--accent);
+}
+.bl-dialog::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: var(--radius); }
+.bl-dialog::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: var(--radius); }
+.bl-dialog-who {
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--amber);
+  margin-bottom: 6px;
+}
+.bl-dialog-who[hidden] { display: none; }
+.bl-dialog-text { font-size: 21px; line-height: 1.38; color: var(--text); }
+.bl-dialog-more {
+  position: absolute; right: 18px; bottom: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
+}
+.bl-overlay .bl-dialog-more { position: static; margin-top: 8px; }
+
+/* --- Out cold / ending ------------------------------------------------- */
+.bl-overlay { position: absolute; inset: 0; display: flex; background: rgba(0, 0, 0, .86); z-index: 6; }
+.bl-overlay[hidden] { display: none; }
+.bl-overlay.is-over .state-title { color: var(--warn); }
+.bl-overlay.is-end .state-title { color: var(--amber); }
+.bl-overlay .state-msg { color: var(--text); font-size: 20px; }
