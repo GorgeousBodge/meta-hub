@@ -47,4 +47,10 @@ window.DECK_APPS = [
     blurb: 'Speech check · choose voice',
     icon: '<path d="M12 26h8l12-10v32L20 38h-8z" fill="currentColor"/><path d="M40 24a10 10 0 0 1 0 16M46 18a18 18 0 0 1 0 28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
   },
+  {
+    id: 'bamberland',
+    name: 'Bamberland',
+    blurb: 'Adventure · rooms · boss',
+    icon: '<path d="M14 26h36" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M19 26 35 6l10 20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="40" r="13" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="38" cy="39" r="3.5" fill="currentColor"/><path d="M24 53l-2 6M40 53l2 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+  },
 ];
