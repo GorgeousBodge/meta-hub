@@ -1,4 +1,4 @@
-[README (1).md](https://github.com/user-attachments/files/34385128/README.1.md)
+[README.md](https://github.com/user-attachments/files/34385128/README.1.md)
 # Bamberland
 
 A small turn-based adventure for the glasses. Bodge steps one tile per swipe, and the world takes its turn after each of his actions, so nothing needs quick reflexes or held buttons.
