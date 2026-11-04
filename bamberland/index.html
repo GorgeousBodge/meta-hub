@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=600, height=600, initial-scale=1, user-scalable=no">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <meta name="description" content="Bamberland: a small turn-based adventure for the glasses.">
+  <title>Bamberland</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/deck/style.css">
+  <link rel="stylesheet" href="/bamberland/bamberland.css">
+</head>
+<body>
+  <div class="frame">
+    <!-- HUD: same ids as every Deck app. In play, hearts / keys / item replace the title. -->
+    <header class="hud">
+      <button class="hud-back focusable" id="hudBack" type="button" aria-label="Back" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="hud-heading">
+        <h1 class="hud-title" id="hudTitle">Bamberland</h1>
+        <span class="hud-sub" id="hudSub"></span>
+        <div class="bl-stats" id="stats" hidden>
+          <span class="bl-hearts" id="hearts" aria-label="Hearts"></span>
+          <span class="bl-keys" id="keys" aria-label="Small keys"></span>
+          <span class="bl-bigkey" id="bigkey" aria-label="Big key"></span>
+        </div>
+      </div>
+      <div class="bl-equip" id="equip" hidden aria-label="Equipped"></div>
+      <div class="hud-status">
+        <span class="status-dot" id="hudDot" aria-hidden="true"></span>
+        <span id="hudStatus"></span>
+        <time class="hud-clock" id="hudClock">--:--</time>
+      </div>
+    </header>
+
+    <main class="stage">
+      <!-- Title screen -->
+      <section class="view bl-title" id="titleView">
+        <canvas class="bl-title-art" id="titleArt" width="200" height="150" aria-hidden="true"></canvas>
+        <p class="bl-lore" id="titleLore"></p>
+        <div class="bl-menu">
+          <button type="button" class="key key-speak focusable" id="btnContinue">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5 19.5 12 7 19.5Z"/></svg>
+            <span class="key-label">Continue</span>
+          </button>
+          <button type="button" class="key focusable" id="btnNew">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="key-label">New game</span>
+          </button>
+          <button type="button" class="key focusable bl-sound" id="btnSound">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/></svg>
+            <span class="key-label">Sound: Off</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- The game board: 600×504, a 15×12 grid of 40 px tiles -->
+      <canvas class="bl-board" id="board" width="600" height="504" hidden aria-label="Game board"></canvas>
+
+      <!-- Dialogue box -->
+      <div class="bl-dialog" id="dialog" hidden role="dialog" aria-live="polite">
+        <div class="bl-dialog-who" id="dialogWho"></div>
+        <p class="bl-dialog-text" id="dialogText"></p>
+        <div class="bl-dialog-more" id="dialogMore">Pinch ▸</div>
+      </div>
+
+      <!-- Out cold / the end -->
+      <div class="bl-overlay" id="overlay" hidden>
+        <div class="state">
+          <div class="state-title" id="overTitle"></div>
+          <div class="state-msg" id="overText"></div>
+          <div class="bl-dialog-more">Pinch to continue</div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="hints" id="hints" aria-hidden="true"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="/deck/deck.js"></script>
+  <script src="/bamberland/lore.js"></script>
+  <script src="/bamberland/rooms.js"></script>
+  <script src="/bamberland/render.js"></script>
+  <script src="/bamberland/game.js"></script>
+</body>
+</html>
