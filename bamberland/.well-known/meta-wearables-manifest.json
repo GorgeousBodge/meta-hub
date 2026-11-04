@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "Bamberland",
+  "description": "A small turn-based adventure. Swipe to step, pinch to act.",
+  "appearance": {
+    "theme_color": "#3FE0FF",
+    "icon": {
+      "src": "../icon.svg",
+      "type": "monochrome"
+    }
+  }
+}
