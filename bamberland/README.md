@@ -1,3 +1,4 @@
+[README (1).md](https://github.com/user-attachments/files/34385128/README.1.md)
 # Bamberland
 
 A small turn-based adventure for the glasses. Bodge steps one tile per swipe, and the world takes its turn after each of his actions, so nothing needs quick reflexes or held buttons.
@@ -24,7 +25,9 @@ What a pinch does depends on what Bodge faces. The hint bar always shows it:
 
 The item ring also has **Reset room** (puts the room back as it was when you came in), **Sound** and **Save & quit**.
 
-Back on the title screen returns to the hub. The game saves itself every time you change room, after every chest and key, and when a room is solved. The save is stored as `bamberland.save`, and the sound setting as `bamberland.sound`.
+Back on the title screen returns to the hub.
+
+**How Back works on the glasses.** The Back gesture isn't sent to the page as a key. The glasses step back through the page's history, and with nothing left, they leave the app. So once you start playing, the game adds one spare history entry. Back uses it up, the game handles it (ring, dialogue), and then adds a new one. On a computer, Escape does the same job. On the title screen there's no spare entry, so Back leaves as usual. The game saves itself every time you change room, after every chest and key, and when a room is solved. The save is stored as `bamberland.save`, and the sound setting as `bamberland.sound`.
 
 If Bodge runs out of hearts, he wakes at the doorway he last came through, with full hearts. Nothing he found is lost.
 
