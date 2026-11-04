@@ -1106,6 +1106,7 @@
     $('equip').hidden = false;
     $('hudTitle').hidden = true;
     if (mode === 'title') mode = 'play';
+    Guard.arm();
     redraw();
   }
   function titleSelect(btn) {
@@ -1133,18 +1134,57 @@
     }
   }
 
+  /* ---------- Back ----------
+     On the glasses, Back is not a key: the system steps back through the
+     page's history, and with no history left it leaves the app. So while you
+     play, the game keeps one spare history entry (a "guard"). Back uses it
+     up, the game opens the item ring (or closes what's open), and then puts
+     a fresh guard back. Escape still works the same way on a computer.
+     The glasses allow only five history entries; this uses one. */
+  const Guard = {
+    on: false,
+    timer: null,
+    arm() {
+      clearTimeout(this.timer);
+      if (this.on) return;
+      // Re-armed just after Back is handled, not during it (Meta's guidance)
+      this.timer = setTimeout(() => {
+        if (this.on || mode === 'title') return;
+        try { history.pushState({ bamberland: 1 }, ''); this.on = true; } catch { /* history blocked */ }
+      }, 60);
+    },
+  };
+  let lastBack = 0;
+  function doBack() {
+    const now = Date.now();
+    if (now - lastBack < 200) return;      // one gesture, one Back, however it arrives
+    lastBack = now;
+    if (mode === 'title') { if (!Deck.toHub()) Deck.bump(document.activeElement); return; }
+    if (mode === 'dialog') nextDialog(true);
+    else if (mode === 'ring') { mode = 'play'; redraw(); }
+    else if (mode === 'play') openRing();
+    // 'over' and 'end' wait for a pinch
+    Guard.arm();
+  }
+  function onPopState(e) {
+    if (e.state && e.state.bamberland) { Guard.on = true; return; }   // moved forward onto a guard
+    if (!Guard.on) return;                                            // not ours
+    Guard.on = false;
+    doBack();
+  }
+
   /* ---------- keys ---------- */
   function onKey(e) {
     const a = Deck.action(e);
     if (!a) return;
     e.preventDefault();
     if (e.repeat && (a === 'select' || a === 'back')) return;
+    if (a === 'back') { doBack(); return; }
 
     if (mode === 'title') {
       const cur = document.activeElement;
       const items = titleButtons();
       if (a === 'select') { if (items.includes(cur)) titleSelect(cur); else Deck.focus(items[0]); return; }
-      if (a === 'back') { if (!Deck.toHub()) Deck.bump(cur); return; }
       if (!items.includes(cur)) { Deck.focus(items[0]); return; }
       if (cur.id === 'btnNew' && confirmNew) { confirmNew = false; cur.querySelector('.key-label').textContent = 'New game'; }
       const next = Deck.nearest(items, cur, a);
@@ -1153,7 +1193,6 @@
     }
     if (mode === 'dialog') {
       if (a === 'select') nextDialog(false);
-      else if (a === 'back') nextDialog(true);
       return;
     }
     if (mode === 'over') {
@@ -1166,14 +1205,12 @@
     }
     if (mode === 'ring') {
       const n = ring.items.length;
-      if (a === 'back') { mode = 'play'; redraw(); return; }
       if (a === 'select') { useRing(); return; }
       ring.i = (ring.i + (a === 'right' || a === 'down' ? 1 : -1) + n) % n;
       redraw();
       return;
     }
     if (mode === 'play') {
-      if (a === 'back') { openRing(); return; }
       if (a === 'select') game.act('pinch');
       else game.act(a);
       if (mode === 'play' || mode === 'dialog') redraw();
@@ -1182,6 +1219,9 @@
 
   function init() {
     document.addEventListener('keydown', onKey);
+    window.addEventListener('popstate', onPopState);
+    // After a reload we may already be sitting on a guard entry
+    Guard.on = !!(history.state && history.state.bamberland);
     titleView.addEventListener('click', (e) => { const b = e.target.closest('.focusable'); if (b && !b.disabled) titleSelect(b); });
     Deck.status('', '');
     // Redraw once the HUD font has arrived, so canvas text uses it
