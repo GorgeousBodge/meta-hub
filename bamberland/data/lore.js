@@ -89,6 +89,11 @@ window.BAMBER_LORE = {
       desc: "Does nothing useful. Kev's best seller.",
       used: 'Fizz. Whistle. Nothing else happens. Kev was right.',
     },
+   kebab: {
+      name: "King's Kebab", price: 10, use: 'nothing',
+      desc: "Fit for a king. Or a woodsman who's only just sat down.",
+      used: "{hero} eats the King's Kebab. Delicious. {brendan} will be furious.",
+    },
   },
   bagMax: 3,    // most of each elixir you can carry
 
