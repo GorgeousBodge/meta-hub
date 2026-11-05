@@ -39,6 +39,10 @@ window.BAMBER_WORLD = {
     sunkmill: 'The Sunk Mill',
   },
 
+  // Spend this many {coins} in shops and a story flag is set and a cut scene plays.
+  // Kev puts every balloon he's paid on his roof: at 99, the shop takes off.
+  spendGoal: { at: 99, set: 'balloons99', cut: 'kev99' },
+
   shops: {
     kev: ['tonic', 'brew', 'fizz', 'kebab'],
   },

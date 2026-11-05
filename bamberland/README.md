@@ -121,7 +121,9 @@ Talk can change with the story. Each person can have several options, and the fi
 
 People are listed in `data/lore.js` with a `sprite` (drawn in the world) and optionally a `portrait` (shown in dialogue). Without a portrait, dialogue shows their sprite large. Only Lauri has a portrait so far; send a photo for each friend and they get one too.
 
-**Shops** are in `world/regions.js`: `shops: { kev: ['tonic', 'brew', 'fizz'] }`. Prices and effects are in `data/lore.js` under `elixirs`. Bodge carries at most 3 of each.
+**Shops** are in `world/regions.js`: `shops: { kev: ['tonic', 'brew', 'fizz', 'kebab'] }`. Prices and effects are in `data/lore.js` under `elixirs`, which also holds non-drinks like the King's Kebab. Bodge carries at most 3 of each.
+
+**Kev's roof.** Every Luftballon spent goes on Kev's roof, shown in his shop as "On the roof: N / 99". `spendGoal: { at: 99, set: 'balloons99', cut: 'kev99' }` in `world/regions.js` sets the `balloons99` story flag and plays the `kev99` cut scene once. In it, Kev dances, the shop floats off and comes back with all 99 balloons. Afterwards the village shop is drawn with them, using `swap: { if: 'balloons99', art: 'shop99' }` on the building, and Kev has a new line. The tune is an original, `kev` in `data/music.js`.
 
 **Telkperson** pops up when Bodge walks into a room, once per visit, if its conditions apply. Each visit can leave a hint for the map, give something and set a flag. They're listed in `world/regions.js`.
 
@@ -129,13 +131,15 @@ People are listed in `data/lore.js` with a `sprite` (drawn in the world) and opt
 
 Each tune in `data/music.js` is a melody, one chord per bar, a speed and a time signature. Rooms choose one with `music: 'town'`; outdoor screens default to their region's tune and dungeons to `dungeon`. Music and sound effects have separate switches (title screen and item ring), and both start off. Music stops while the glasses' screen is off.
 
+Tunes can also set `lead: 'square'` for a brighter melody and `bass: 'octaves'` for a bouncing bass, as in Kev's tune.
+
 Cut scenes in `data/cutscenes.js` are panels with a line of text, a ground (a little map, in day or gloom, or fading between them) and layers of pictures that can glide, swoop, hop, fade, look dazed or glow. `opening` plays at New game and `sunstone` whenever a Sunstone is found; a room plays one on its first visit with `cut: 'id'`. Pinch moves on, Back skips. A panel moves for its `dur` seconds, then holds still to save battery.
 
 ## Check the game before you commit (optional)
 
 The `test/` scripts run on a computer with Node, from the `bamberland` folder:
 
-- `node test/maps.js` checks every room: sizes, letters, exits lining up both ways, signs and chests matching their lists, story flags that are used but never set, unknown names, tunes adding up, cut scenes pointing at real art.
+- `node test/maps.js` checks every room: sizes, letters, exits lining up both ways, signs and chests matching their lists, story flags that are used but never set, unknown names, tunes adding up, cut scenes pointing at real art. It also catches a typo that stops a file loading, like an apostrophe inside single quotes.
 - `node test/play.js` plays the whole demo from New game to the Sunstone, with path-finding and simple fight tactics, and checks shopping, Telkperson, the map and save and load on the way.
 
 The site doesn't need them, so you don't have to upload them.

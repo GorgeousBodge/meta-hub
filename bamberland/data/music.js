@@ -8,6 +8,8 @@
            +1 = a semitone up, 72 = C an octave up. 0 is a rest.
    chords  one per bar: [bass note, [chord notes]]
    The melody should add up to the same number of beats as the chords.
+   lead   'square' for a brighter, buzzier melody (default 'triangle')
+   bass   'octaves' bounces the bass between low and high on every half beat
 
    Rooms pick a tune with music: 'id'. Outdoor screens default to their
    region's tune (world/regions.js), dungeon rooms to 'dungeon'.
@@ -48,6 +50,25 @@ window.BAMBER_MUSIC = {
     chords: [
       [41, [53, 57, 60]], [48, [52, 55, 60]], [50, [53, 57, 62]], [46, [50, 53, 58]],
       [41, [53, 57, 60]], [48, [52, 55, 60]], [48, [52, 55, 58]], [41, [53, 57, 60]],
+    ],
+  },
+
+  // Kev's big moment: an original, bouncy 80s synth-pop tune. 4/4, D major
+  kev: {
+    bpm: 132, bar: 4, comp: [2, 4], lead: 'square', bass: 'octaves',
+    melody: [
+      [74, 0.5], [74, 0.5], [78, 1], [81, 0.5], [78, 0.5], [76, 1],
+      [73, 0.5], [76, 0.5], [81, 1.5], [0, 0.5], [79, 0.5], [78, 0.5],
+      [78, 0.5], [76, 0.5], [74, 1], [71, 1], [74, 1],
+      [76, 1.5], [74, 0.5], [71, 1], [0, 1],
+      [81, 0.5], [81, 0.5], [83, 0.5], [81, 0.5], [78, 1], [74, 1],
+      [76, 0.5], [78, 0.5], [76, 0.5], [73, 0.5], [69, 2],
+      [71, 0.5], [74, 0.5], [79, 1], [78, 0.5], [76, 0.5], [74, 1],
+      [76, 1], [73, 1], [74, 2],
+    ],
+    chords: [
+      [38, [62, 66, 69]], [45, [61, 64, 69]], [47, [62, 66, 71]], [43, [62, 67, 71]],
+      [38, [62, 66, 69]], [45, [61, 64, 69]], [43, [62, 67, 71]], [45, [61, 64, 69]],
     ],
   },
 

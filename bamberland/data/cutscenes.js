@@ -21,6 +21,7 @@
        arc      lifts the middle of a glide by this many pixels (a swoop)
        hop      true: hops on the spot while the panel moves; 1 hops in step,
                 0 hops between the others' hops
+       dance    true: hops and spins (turns left and right) to the beat
        show     [from, until] seconds when it is visible (null = for good)
        stars    true: dazed stars above it      bang: true: an amber "!"
        rays     true: soft light rays around it
@@ -117,6 +118,47 @@ window.BAMBER_CUTS = {
           { art: 'tori', x: [640, -120], y: 160, arc: 110, scale: 5, flip: true, tone: 'day', show: [0, 1.6] },
           { art: 'queen', x: [660, -100], y: 210, arc: 110, scale: 3, tone: 'day', show: [0.6, 1.6] },
           { bang: true, x: 297, y: 238, show: [1.6, null] },
+        ],
+      },
+    ],
+  },
+
+  // Plays when 99 Luftballons have been spent (world/regions.js: spendGoal)
+  kev99: {
+    music: 'kev',
+    panels: [
+      {
+        text: 'Ninety-nine Luftballons! {kev} cannot contain himself. Nobody can stop him dancing.',
+        dur: 4,
+        ground: { map: 'meadow', tone: 'day' },
+        layers: [
+          { art: 'sun', x: 450, y: 30 },
+          { art: 'shop', x: 230, y: 60, scale: 7 },
+          { art: 'kev', x: 280, y: 236, dance: true },
+          { art: 'hero', face: 'up', x: 200, y: 280 },
+        ],
+      },
+      {
+        text: 'The balloons tug. The roof creaks. Then the whole shop lifts gently into the sky.',
+        dur: 3.5,
+        ground: { map: 'meadow', tone: 'day' },
+        layers: [
+          { art: 'sun', x: 450, y: 30 },
+          { art: 'cloud', x: [500, 380], y: 40, scale: 3 },
+          { art: 'shop', x: [230, 260], y: [60, -300], scale: 7 },
+          { art: 'kev', x: 280, y: 236, dance: true },
+          { art: 'hero', face: 'up', x: 200, y: 280 },
+        ],
+      },
+      {
+        text: 'It drifts back down at teatime, with all ninety-nine balloons on the roof.',
+        dur: 3.5,
+        ground: { map: 'meadow', tone: 'day' },
+        layers: [
+          { art: 'sun', x: 450, y: 30 },
+          { art: 'shop99', x: 230, y: [-320, 60], scale: 7, rays: true },
+          { art: 'kev', x: 280, y: 236, dance: true },
+          { art: 'hero', face: 'up', x: 200, y: 280 },
         ],
       },
     ],

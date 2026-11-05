@@ -16,6 +16,8 @@
    buildings: [{ art: 'cottage', x, y }] draws a 2×2-tile picture from
    art.js BUILDINGS with its top-left on tile x, y. Its four tiles are
    solid, or list the solid ones yourself: solid: [[x, y], …].
+   swap: { if: 'flag', art: 'other' } draws a different picture once a
+   story flag is set (Kev's shop with all 99 balloons).
 
    TALK on an outdoor screen can depend on the story so far:
      { who: 'brendan', face: 'right', say: [
@@ -50,7 +52,7 @@ BAMBER_WORLD.add('wood', {
     ],
     buildings: [
       { art: 'cottage', x: 2, y: 1 },
-      { art: 'shop', x: 10, y: 1 },
+      { art: 'shop', x: 10, y: 1, swap: { if: 'balloons99', art: 'shop99' } },  // 99 balloons on the roof
       { art: 'cottage', x: 2, y: 7 },
       { art: 'well', x: 5, y: 8, solid: [[5, 8], [6, 8], [5, 9], [6, 9]] },
     ],
@@ -59,6 +61,10 @@ BAMBER_WORLD.add('wood', {
     ],
     talk: [
       { who: 'kev', face: 'down', say: [
+        { if: 'balloons99', shop: 'kev', lines: [
+          'Ninety-nine Luftballons. On the roof. I may never come down from this.',
+          'Technically the shop did come down. Eventually. What can I get you?',
+        ] },
         { unless: 'met_kev', set: 'met_kev', shop: 'kev', lines: [
           'Welcome to the finest potion shop under a balloon. Three balloons. The aim is ninety-nine.',
           "I take payment in {coins}. Red ones. Don't ask, it's a whole thing.",

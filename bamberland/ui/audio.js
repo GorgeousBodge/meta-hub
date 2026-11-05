@@ -82,13 +82,17 @@
   function compile(tune) {
     const beat = 60 / tune.bpm, events = [];
     let b = 0;
+    const square = tune.lead === 'square';
     for (const [m, len] of tune.melody) {
-      if (m) events.push({ at: b, f: n(m), len: len * beat * 0.92, type: 'triangle', vol: 0.11, att: 0.02 });
+      if (m) events.push({ at: b, f: n(m), len: len * beat * (square ? 0.8 : 0.92), type: square ? 'square' : 'triangle', vol: square ? 0.045 : 0.11, att: 0.01 });
       b += len;
     }
     tune.chords.forEach(([root, tones], bar) => {
       const at = bar * tune.bar;
-      events.push({ at, f: n(root), len: beat * (tune.bar - 0.4), type: 'triangle', vol: 0.10, att: 0.01 });
+      if (tune.bass === 'octaves') {
+        // low, high, low, high: on every half beat
+        for (let i = 0; i < tune.bar * 2; i++) events.push({ at: at + i / 2, f: n(root + (i % 2 ? 12 : 0)), len: beat * 0.42, type: 'triangle', vol: 0.11, att: 0.005 });
+      } else events.push({ at, f: n(root), len: beat * (tune.bar - 0.4), type: 'triangle', vol: 0.10, att: 0.01 });
       for (const c of tune.comp || []) for (const m of tones) {
         events.push({ at: at + c - 1, f: n(m), len: beat * 0.5, type: 'sine', vol: 0.03, att: 0.01 });
       }

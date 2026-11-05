@@ -86,7 +86,8 @@
     // Everything standing on the ground, back to front, so lower things overlap higher ones
     const things = [];
     for (const b of R.buildings) {
-      const img = Px.art(b.art, md);
+      const art = b.swap && G.story[b.swap.if] ? b.swap.art : b.art;
+      const img = Px.art(art, md);
       if (img) things.push({ y: b.y + 1, draw: () => Px.blit(g, img, px(b.x), py(b.y)) });
     }
     for (const [k, o] of Object.entries(R.obj)) {
@@ -655,14 +656,22 @@
       g.lineTo(x + 14, y + 10); g.lineTo(x + 5, y + 14); g.lineTo(x - 5, y + 10); g.lineTo(x - 14, y + 14); g.closePath();
       g.moveTo(x - 5, y - 14); g.lineTo(x - 5, y + 10); g.moveTo(x + 5, y - 10); g.lineTo(x + 5, y + 14);
       g.stroke();
-    } else if (ELIXIR_COL[id]) {
+    } else if (id === 'kebab') {
+      // a skewer with three chunks and an onion
+      g.moveTo(x - 15, y + 15); g.lineTo(x + 15, y - 15); g.stroke();
+      noGlow(g);
+      for (const [ox, oy, c] of [[-7, 7, '#c08a4a'], [0, 0, '#e0703a'], [7, -7, '#c08a4a']]) {
+        g.fillStyle = c; g.beginPath(); g.ellipse(x + ox, y + oy, 6, 4.5, -0.8, 0, Math.PI * 2); g.fill();
+      }
+      g.fillStyle = '#a6e25c'; g.beginPath(); g.arc(x + 11, y - 11, 2.5, 0, Math.PI * 2); g.fill();
+    } else if (ELIXIR_COL[id] || window.BAMBER_LORE.elixirs[id]) {
       // a bottle in the elixir's colour
       g.moveTo(x - 4, y - 15); g.lineTo(x + 4, y - 15);
       g.moveTo(x - 3, y - 15); g.lineTo(x - 3, y - 7); g.quadraticCurveTo(x - 12, y - 3, x - 11, y + 7);
       g.quadraticCurveTo(x - 10, y + 15, x, y + 15); g.quadraticCurveTo(x + 10, y + 15, x + 11, y + 7);
       g.quadraticCurveTo(x + 12, y - 3, x + 3, y - 7); g.lineTo(x + 3, y - 15);
       g.stroke();
-      noGlow(g); g.fillStyle = ELIXIR_COL[id];
+      noGlow(g); g.fillStyle = ELIXIR_COL[id] || '#cfd8e8';
       g.beginPath(); g.moveTo(x - 10, y + 3); g.quadraticCurveTo(x, y, x + 10, y + 3);
       g.quadraticCurveTo(x + 10, y + 13, x, y + 13); g.quadraticCurveTo(x - 10, y + 13, x - 10, y + 3); g.fill();
     } else if (id === 'title') {
@@ -705,8 +714,17 @@
     Px.blit(g, Px.art('balloon', 'day'), 470, 28, 3);
     g.fillStyle = C.amber; g.font = `700 20px ${FONT}`;
     g.fillText(String(G.coins), 560, 48);
+    if (shop.roof && shop.roof.goal) {
+      // Kev's roof: every balloon spent goes up there
+      const r = shop.roof, done = r.spent >= r.goal;
+      g.textAlign = 'left'; g.font = `600 13px ${FONT}`;
+      g.fillStyle = done ? '#ff6a6a' : C.dim;
+      if ('letterSpacing' in g) g.letterSpacing = '1px';
+      g.fillText(done ? `ALL ${r.goal} ON THE ROOF` : `ON THE ROOF: ${Math.min(r.spent, r.goal)} / ${r.goal}`, 40, 72);
+      if ('letterSpacing' in g) g.letterSpacing = '0px';
+    }
     shop.items.forEach((it, i) => {
-      const y = 86 + i * 62, sel = i === shop.i;
+      const y = 90 + i * 62, sel = i === shop.i;
       noGlow(g);
       g.fillStyle = sel ? 'rgba(63,224,255,0.14)' : 'rgba(0,0,0,0.6)';
       rr(g, 30, y, 540, 52, 8); g.fill();
@@ -728,7 +746,7 @@
     if (it) {
       noGlow(g);
       g.textAlign = 'center'; g.fillStyle = C.white; g.font = `500 17px ${FONT}`;
-      wrap(g, it.desc, 300, 86 + shop.items.length * 62 + 34, 500, 22);
+      wrap(g, it.desc, 300, 90 + shop.items.length * 62 + 34, 500, 22);
     }
   }
 

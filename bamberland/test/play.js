@@ -456,4 +456,17 @@ const s2 = lastSave();
 const again = game();
 check(again.g.load(JSON.parse(JSON.stringify(s2))).ok && again.g.G.story.sun_mill && again.g.G.forge === 1, 'the final save loads too');
 
+/* ======================= Kev's 99 Luftballons ======================= */
+console.log("Kev's roof");
+travel('village');
+check(g.spent().spent === 10 && g.spent().goal === 99, "the King's Kebab is the first 10 on Kev's roof");
+G().coins += 200;                      // a generous test budget
+for (let i = 0; i < 60 && !G().story.balloons99; i++) {
+  if ((G().bag.fizz || 0) >= 3) g.drink('fizz');
+  g.buy('fizz');
+}
+check(G().story.balloons99 && g.spent().spent >= 99, 'spent 99 Luftballons');
+check(cutPlayed('kev99'), "Kev's 99 Luftballons cut scene plays");
+check(!g.buy('fizz').goal, 'it only plays once');
+
 console.log(`✓ Played start to the second Sunstone in ${G().turns} turns (${outCold} times out cold)`);

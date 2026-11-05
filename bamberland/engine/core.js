@@ -125,6 +125,7 @@
         hint: '',
         entry: null,
         forge: 0,           // times Brendan has reforged the Thwacker
+        spent: 0,           // Luftballons spent in shops (Kev's roof)
         turns: 0, drops: 0,
         over: false, won: false,
       };

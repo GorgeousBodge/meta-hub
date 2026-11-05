@@ -39,12 +39,15 @@
       const md = L.tone || sceneTone;
       if (L.bunting) { bunting(g, md, lerp(L.sag || 0, k)); continue; }
       if (L.bang) { bang(g, L.x, L.y); continue; }
-      const img = L.art === 'hero' ? Px.bodge(L.face || 'down', 0, md, S.cap) : Px.art(L.art, md, !!L.flip);
+      // dancing: turn left and right on the beat while the panel moves
+      const spin = L.dance && t < dur ? Math.floor(t * 2.2) % 2 === 1 : false;
+      const img = L.art === 'hero' ? Px.bodge(L.face || 'down', 0, md, S.cap) : Px.art(L.art, md, !!L.flip !== spin);
       if (!img) continue;
       const scale = L.scale || Px.PX;
       let x = lerp(L.x, k), y = lerp(L.y, k);
       if (L.arc) y -= Math.sin(k * Math.PI) * L.arc;
       if (L.hop != null && hopN && hopN % 2 === L.hop % 2) y -= 8;
+      if (L.dance && t < dur && Math.floor(t * 4.4) % 2 === 0) y -= 10;
       if (L.rays) rays(g, x + (img.width * scale) / 2, y + (img.height * scale) / 2, t);
       g.save();
       g.globalAlpha = L.alpha != null ? lerp(L.alpha, k) : 1;

@@ -58,11 +58,19 @@ BamberEngine.part((X) => {
     if (G.coins < e.price) return { ok: false, msg: X.fmt(M.poor) };
     G.coins -= e.price;
     G.bag[id] = (G.bag[id] || 0) + 1;
+    G.spent = (G.spent || 0) + e.price;
     on.sound('coin');
+    // Spend enough, and something happens (world/regions.js: spendGoal)
+    const goal = WORLD.spendGoal;
+    const reached = goal && G.spent >= goal.at && !G.story[goal.set];
+    if (reached) G.story[goal.set] = 1;
     X.save();
     on.change();
-    return { ok: true, msg: X.fmt(M.bought, { name: e.name }) };
+    if (reached && goal.cut) on.cut(goal.cut);
+    return { ok: true, msg: X.fmt(M.bought, { name: e.name }), goal: !!reached };
   };
+  // How much has gone on the roof so far
+  X.api.spent = () => ({ spent: X.G.spent || 0, goal: (WORLD.spendGoal || {}).at || 0 });
   // Using an elixir from the item ring takes no turn
   X.api.drink = (id) => {
     const G = X.G, e = LORE.elixirs[id];

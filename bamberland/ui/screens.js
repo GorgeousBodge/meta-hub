@@ -296,7 +296,7 @@
     pendingShop = null;
     if (!id) return;
     const p = LORE.people[id];
-    shop = { id, title: p ? `${fmt(game.nameOf(id))}'s Potions` : 'Shop', items: game.shopStock(id), i: (shop && shop.id === id) ? shop.i : 0 };
+    shop = { id, title: p ? `${fmt(game.nameOf(id))}'s Potions` : 'Shop', items: game.shopStock(id), roof: id === 'kev' ? game.spent() : null, i: (shop && shop.id === id) ? shop.i : 0 };
     mode = 'shop';
     redraw();
   }
@@ -304,8 +304,10 @@
     const it = shop.items[shop.i];
     if (!it) return;
     const r = game.buy(it.id);
+    if (r.goal) return;                  // the cut scene has taken over
     Deck.toast(r.msg, r.ok ? undefined : { error: true });
     shop.items = game.shopStock(shop.id);
+    if (shop.roof) shop.roof = game.spent();
     redraw();
   }
 

@@ -63,7 +63,10 @@ for (const [id, d] of Object.entries(WORLD.rooms)) {
   if (d.thorns) flagsUsed.push([id, d.thorns]);
   if (d.cut && !CUTS[d.cut]) bad(id, `unknown cut scene "${d.cut}"`);
   if (d.music && !MUSIC[d.music]) bad(id, `unknown tune "${d.music}"`);
-  for (const b of d.buildings || []) if (!ART.BUILDINGS[b.art]) bad(id, `unknown building "${b.art}"`);
+  for (const b of d.buildings || []) {
+    if (!ART.BUILDINGS[b.art]) bad(id, `unknown building "${b.art}"`);
+    if (b.swap && !ART.BUILDINGS[b.swap.art]) bad(id, `unknown building "${b.swap.art}" in swap`);
+  }
   if (!d.at) bad(id, 'no at: [column, row] for the map');
   // Doors into other rooms
   for (const dr of d.doors || []) {
@@ -111,6 +114,10 @@ for (const ev of WORLD.telk) {
   if (ev.give && !goodGive(ev.give)) problems.push(`telk ${ev.id}: unknown give "${ev.give}"`);
   [].concat(ev.set || []).forEach((f) => flagsSet.add(f));
   [].concat(ev.if || [], ev.unless || []).forEach((f) => flagsUsed.push(['telk ' + ev.id, f]));
+}
+if (WORLD.spendGoal) {
+  flagsSet.add(WORLD.spendGoal.set);
+  if (WORLD.spendGoal.cut && !CUTS[WORLD.spendGoal.cut]) problems.push(`spendGoal: unknown cut scene "${WORLD.spendGoal.cut}"`);
 }
 for (const r of Object.values(WORLD.regions)) {
   if (r.sun) flagsSet.add(r.sun);
