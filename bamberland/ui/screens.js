@@ -417,13 +417,15 @@
 
   /* ---------- naming ---------- */
   let naming = null;   // { slot, names, editing }
+  let nameDraft = {};  // names chosen so far, kept if you pop back to the slots and return
+  let editEnded = 0;   // when the text box last closed (see doBack)
   function nameable() {
     return [['hero', 'Hero']].concat(Object.entries(LORE.people).filter(([, p]) => p.nameable).map(([id, p]) => [id, p.role || '']));
   }
   function defaultName(id) { return id === 'hero' ? LORE.hero.name : LORE.people[id].name; }
   function showNaming(n) {
     mode = 'naming';
-    naming = { slot: n, names: {}, editing: null };
+    naming = { slot: n, names: nameDraft, editing: null };
     showView('naming');
     Deck.title('Who’s who', `Slot ${n}`);
     const grid = $('nameGrid');
@@ -462,14 +464,21 @@
     input.focus();
     try { input.select(); } catch { /* fine */ }
   }
-  function endEdit(keep) {
+  // Keep whatever is in the box. An empty box goes back to the original name.
+  function keepName() {
+    const id = naming && naming.editing;
+    if (!id) return;
+    const v = $('nameInput').value.replace(/\s+/g, ' ').trim().slice(0, 16);
+    if (v && v !== defaultName(id)) naming.names[id] = v; else delete naming.names[id];
+  }
+  // Close the text box. The name is always kept: on the glasses, closing the
+  // handwriting or dictation panel can arrive as a Back, so Back means "done".
+  function endEdit() {
     const input = $('nameInput'), id = naming && naming.editing;
     if (!id) return;
+    keepName();
     naming.editing = null;
-    if (keep) {
-      const v = input.value.replace(/\s+/g, ' ').trim().slice(0, 16);
-      if (v && v !== defaultName(id)) naming.names[id] = v; else delete naming.names[id];
-    }
+    editEnded = Date.now();
     $('nameEdit').hidden = true;
     input.blur();
     renderNames();
@@ -482,6 +491,7 @@
     enterPlay();
     game.newGame(naming.names);
     naming = null;
+    nameDraft = {};
     redraw();
   }
 
@@ -529,7 +539,13 @@
     lastBack = now;
     if (mode === 'title') { if (!Deck.toHub()) Deck.bump(document.activeElement); return; }
     if (mode === 'slots') { showTitle(); return; }
-    if (mode === 'naming') { if (naming && naming.editing) endEdit(false); else showSlots(naming && naming.slot); Guard.arm(); return; }
+    if (mode === 'naming') {
+      if (naming && naming.editing) endEdit();
+      // A Back just after the text box closed is the same gesture, not a second one
+      else if (Date.now() - editEnded > 700) showSlots(naming && naming.slot);
+      Guard.arm();
+      return;
+    }
     if (mode === 'cut') endCut(true);
     else if (mode === 'dialog') nextDialog(true);
     else if (mode === 'ring' || mode === 'shop' || mode === 'map') { mode = 'play'; redraw(); }
@@ -557,8 +573,7 @@
   function onKey(e) {
     // Typing a name: the text box gets every key except Enter and Escape
     if (naming && naming.editing && e.target === $('nameInput')) {
-      if (e.key === 'Enter') { e.preventDefault(); endEdit(true); }
-      else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); endEdit(); }
       return;
     }
     const a = Deck.action(e);
@@ -618,7 +633,9 @@
     click(views.title, titleSelect);
     click(views.slots, slotSelect);
     click(views.naming, (b) => { if (b !== $('nameInput')) nameSelect(b); });
-    $('nameInput').addEventListener('blur', () => { if (naming && naming.editing) endEdit(true); });
+    // Save as the name is written, said or typed, so nothing is lost however the box closes
+    for (const ev of ['input', 'change', 'compositionend']) $('nameInput').addEventListener(ev, keepName);
+    $('nameInput').addEventListener('blur', () => { if (naming && naming.editing) endEdit(); });
     // Glasses screen off or app hidden: stop the music clock, carry on when back
     document.addEventListener('visibilitychange', () => (document.hidden ? Music.pause() : Music.resume()));
     Deck.status('', '');
