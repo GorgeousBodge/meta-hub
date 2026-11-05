@@ -225,19 +225,26 @@ check(g.fmt('{hero} and {kev}') === 'Tester and Kevin', 'chosen names appear in 
 check(R().base[6][1] === '#', 'the west road to Millbrook Vale is choked with brambles');
 
 useAt(4, 9, 'down');
-check(talked('brendan') === 1 && !G().story.brambles, 'Brendan wants a Fizzwhistle first');
+check(talked('brendan') === 1 && !G().story.brambles, "Brendan wants a King's Kebab first");
 useAt(11, 3, 'down');
 check(log.some((l) => l.type === 'shop' && l.a[0] === 'kev'), 'talking to Kev opens his shop');
-check(!g.buy('fizz').ok, "can't buy with no money");
+check(!g.buy('kebab').ok, "can't buy with no money");
 goTo(13, 10);
 check(G().coins === 5, 'picked up a pocket of 5 Luftballons');
-check(g.buy('fizz').ok && G().bag.fizz === 1 && G().coins === 0, 'bought a Fizzwhistle');
-useAt(4, 9, 'down');
-check(G().story.brambles && !G().bag.fizz, 'Brendan took the Fizzwhistle and cleared the brambles');
+check(!g.buy('kebab').ok, "a King's Kebab costs 10: not enough yet");
 
 travel('woodpath');
 check(G().telk['wood-first'] && log.some((l) => l.type === 'telk'), 'Telkperson turns up in the wood');
 check(R().visitor && R().visitor.who === 'telk', 'Telkperson stands next to Bodge while talking');
+check(R().base[1][7] === '#', 'the brambles block the way north');
+goTo(12, 7); goTo(5, 10);
+check(G().coins === 15, 'two more pockets in the wood');
+travel('village');
+check(g.buy('kebab').ok && G().bag.kebab === 1 && G().coins === 5, "bought a King's Kebab");
+useAt(4, 9, 'down');
+check(G().story.brambles && !G().bag.kebab, 'Brendan ate the kebab and cleared the brambles');
+
+travel('woodpath');
 check(R().base[1][7] === '.', 'the brambles are gone');
 travel('glade');
 check(G().telk['oak-door'], 'Telkperson points into the Hollow Oak');

@@ -75,13 +75,13 @@ BAMBER_WORLD.add('wood', {
         ] },
         { if: 'forged1', lines: ['Swing it gently. Or don\'t. I\'m not your mum.', 'Bring me another Sunstone and we\'ll see what else it can do.'] },
         { if: 'brambles', lines: ['Brambles are down. Mind the splinters.', 'Bring me some timber one day and I\'ll build you a bridge.'] },
-        { has: 'fizz', take: 'fizz', set: 'brambles', lines: [
-          'A Fizzwhistle! My favourite. Does nothing at all.',
+        { has: 'kebab', take: 'kebab', set: 'brambles', lines: [
+          "Is that a King's Kebab? For me? You shouldn't have. You really should have.",
           'Right then. Brambles. Give me a minute… done. Off you go, {hero}.',
         ] },
         { lines: [
           "Brambles past the wood? I'd cut them, but I've only just sat down.",
-          "Fetch me a Fizzwhistle from {kev} and I might find the energy.",
+          "Fetch me a King's Kebab from {kev} and I might find the energy.",
         ] },
       ] },
     ],

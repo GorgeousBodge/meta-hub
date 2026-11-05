@@ -81,7 +81,7 @@ window.BAMBER_CUTS = {
         ],
       },
       {
-        text: 'Then clouds filled the sky, and the sun disappeared with all it's warmth and joy.',
+        text: "Then clouds filled the sky, and the sun disappeared with all its warmth and joy.",
         dur: 1.8,
         ground: { map: 'meadow', tone: ['day', 'gloom'] },
         layers: [
