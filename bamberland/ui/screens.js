@@ -118,7 +118,7 @@
     $('bigkey').classList.toggle('is-on', !!G.bigKey);
     $('bigkey').hidden = game.R.field && !G.bigKey;
     $('coins').innerHTML = `${ICONS.coin}<b>${G.coins}</b>`;
-    const it = LORE.items[G.equip];
+    const it = itemInfo(G.equip);
     $('equip').innerHTML = `${ICONS[G.equip] || ''}<span>${Deck.esc(it ? it.name : '')}</span>`;
   }
   function updateHints() {
@@ -229,12 +229,21 @@
     redraw();
   }
 
+  // An item's name and description, allowing for Brendan's reforging
+  function itemInfo(id) {
+    const it = LORE.items[id];
+    if (!it) return null;
+    const lv = (game.G && game.G.forge) || 0;
+    const f = id === 'thwacker' && lv && it.forged && it.forged[lv - 1];
+    return { name: fmt(f ? f.name : it.name), desc: fmt(f ? f.desc : it.desc) };
+  }
+
   /* ---------- item ring ---------- */
   function openRing(keep) {
     const G = game.G;
     const items = [];
     for (const id of ['thwacker', 'hopstaff']) {
-      if (G.items[id]) items.push({ id, kind: 'item', name: fmt(LORE.items[id].name), desc: fmt(LORE.items[id].desc), on: G.equip === id });
+      if (G.items[id]) { const info = itemInfo(id); items.push({ id, kind: 'item', name: info.name, desc: info.desc, on: G.equip === id }); }
     }
     for (const [id, e] of Object.entries(LORE.elixirs)) {
       if (G.bag[id] > 0) items.push({ id, kind: 'elixir', name: fmt(e.name), desc: fmt(e.desc), count: G.bag[id] });

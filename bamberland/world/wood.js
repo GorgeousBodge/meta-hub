@@ -5,6 +5,11 @@
      .  grass        ,  flowers      :  path
      T  tree         *  bush         f  fence      ~  water
      %  brambles (solid until the room's "thorns" story flag is set)
+
+   doors: [{ at: [7, 3], to: 'oakroot', x: 7, y: 10, face: 'up' }] makes a
+   tile (usually in a building) a way into another room: stepping onto it
+   takes Bodge there. On the other side, an exit can lead back to a set
+   spot: exits: { s: { to: 'glade', x: 7, y: 4, face: 'down' } }.
    and the same objects as dungeons: N person, = sign, C chest, P pot,
    $ a pocket of {coins} (5), H heart, K key, @ new-game start.
 
@@ -28,6 +33,7 @@ BAMBER_WORLD.add('wood', {
     music: 'town',
     at: [0, 2],
     exits: { n: 'woodpath', w: 'vale' },
+    thorns: 'sun_wood',          // the west road stays choked until the wood's Sunstone is back
     map: [
       'TTTTTTT:TTTTTTT',
       'T.,....:....,.T',
@@ -35,7 +41,7 @@ BAMBER_WORLD.add('wood', {
       'T......:...N..T',
       'Tff.ff.:.ff.ffT',
       'T,.....:....=.T',
-      '::::::::::::::T',
+      ':%::::::::::::T',
       'TP...,.:......T',
       'T......:@.~~~.T',
       'T.*.N..:.~~~~.T',
@@ -61,6 +67,13 @@ BAMBER_WORLD.add('wood', {
         { shop: 'kev', lines: ['Back again, {hero}? Lovely. Every balloon you spend goes on the roof.'] },
       ] },
       { who: 'brendan', face: 'right', say: [
+        { if: 'sun_wood', unless: 'forged1', set: 'forged1', forge: 1, lines: [
+          "Is that a Sunstone? Give it here. And the {weapon}. Don't look so worried.",
+          '*CLANG* *CLANG* *hiss*',
+          "There. It'll hit twice as hard now. Still won't dent anything spiky, mind.",
+          "The brambles on the west road have shrivelled up too. Millbrook Vale's that way.",
+        ] },
+        { if: 'forged1', lines: ['Swing it gently. Or don\'t. I\'m not your mum.', 'Bring me another Sunstone and we\'ll see what else it can do.'] },
         { if: 'brambles', lines: ['Brambles are down. Mind the splinters.', 'Bring me some timber one day and I\'ll build you a bridge.'] },
         { has: 'fizz', take: 'fizz', set: 'brambles', lines: [
           'A Fizzwhistle! My favourite. Does nothing at all.',
@@ -119,8 +132,9 @@ BAMBER_WORLD.add('wood', {
       'TTTTTTT:TTTTTTT',
     ],
     buildings: [{ art: 'oak', x: 6, y: 2 }],
+    doors: [{ at: [7, 3], to: 'oakroot', x: 7, y: 10, face: 'up' }],
     signs: [
-      ['The Hollow Oak. Something stirs inside, and it sounds cross.', '(The way in opens in the next update.)'],
+      ['The Hollow Oak. Something stirs inside, and it sounds cross.', 'The door in the trunk is open. Somebody has left a muddy footprint on it.'],
     ],
     chests: ['coins:15'],
   },

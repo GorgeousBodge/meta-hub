@@ -22,6 +22,8 @@ BamberEngine.part((X) => {
     for (const f of list(o.set)) G.story[f] = 1;
     if (o.set) X.refreshThorns();
     if (o.give) X.give(o.give, { quiet: true });
+    // forge: 1 = Brendan reforges the Thwacker to that level
+    if (o.forge && (G.forge || 0) < o.forge) { G.forge = o.forge; on.sound('fanfare'); }
   }
 
   /* ---------- talking ---------- */

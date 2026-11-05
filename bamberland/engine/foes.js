@@ -12,6 +12,8 @@ BamberEngine.part((X) => {
   const WISP_RELOAD = 3;                // turns between embers
   const BOSS_COOL = [4, 4, 3];          // turns its core stays open, by hits taken
   const CRACK_TURNS = 6;                // how long slam cracks stay open
+  const THORN_WAVES = [2, 2, 3];        // root waves before the Thornmother's heart opens, by hits taken
+  const THORN_OPEN = [4, 3, 3];         // turns her heart stays open, by hits taken
   const solid = (o) => SOLID_OBJ.includes(o || '-');
 
   /* ---------- being hit ---------- */
@@ -20,7 +22,7 @@ BamberEngine.part((X) => {
       on.toast(X.fmt(LORE.messages.clang)); on.sound('clang');
       return;
     }
-    e.hp -= 1;
+    e.hp -= 1 + (X.G.forge || 0);         // a reforged Thwacker hits harder
     e.flash = 1;
     on.sound('hit');
     on.fx('hit', { x: e.x, y: e.y });
@@ -178,8 +180,54 @@ BamberEngine.part((X) => {
       if (X.floorish(x, y) && !X.bossAt(x, y) && !solid(X.objAt(x, y))) R.marks.push([x, y]);
     }
   }
+  /* ---------- the Thornmother: mark a line, roots erupt, then her heart opens ---------- */
+  // Mark every floor tile in Bodge's row or his column, turn about. Always one
+  // line, never both: one step sideways is always enough to get clear.
+  function thornMarks() {
+    const G = X.G, R = X.R, b = R.boss;
+    b.phase = 'mark';
+    R.marks = [];
+    const useRow = (b.waves + b.hits) % 2 === 0;
+    for (let i = 0; i < Math.max(X.W, X.H); i++) {
+      const [x, y] = useRow ? [i, G.py] : [G.px, i];
+      if (X.floorish(x, y) && !X.bossAt(x, y) && !solid(X.objAt(x, y))) R.marks.push([x, y]);
+    }
+  }
+  function thornTurn() {
+    const R = X.R, b = R.boss;
+    switch (b.phase) {
+      case 'wake':
+        b.t -= 1;
+        if (b.t <= 0) thornMarks();
+        break;
+      case 'mark': {
+        const hit = R.marks.some(([x, y]) => X.isHero(x, y));
+        on.fx('roots', { tiles: R.marks.slice() });
+        on.sound('slam');
+        on.fx('shake');
+        R.marks = [];
+        b.waves += 1;
+        if (hit) X.hurt(2);
+        if (b.waves >= THORN_WAVES[Math.min(b.hits, THORN_WAVES.length - 1)]) {
+          b.waves = 0;
+          b.phase = 'open';
+          b.t = THORN_OPEN[Math.min(b.hits, THORN_OPEN.length - 1)];
+          on.sound('cool');
+        } else b.phase = 'rest';
+        break;
+      }
+      case 'open':
+        b.t -= 1;
+        if (b.t <= 0) thornMarks();
+        break;
+      default:            // 'rest' and 'recoil': one quiet turn, then mark again
+        thornMarks();
+    }
+  }
+
   X.bossTurn = () => {
     const R = X.R, b = R.boss;
+    if (b.type === 'thorn') { thornTurn(); return; }
     switch (b.phase) {
       case 'wake':
         b.t -= 1;
@@ -230,7 +278,8 @@ BamberEngine.part((X) => {
   };
   X.strikeBoss = () => {
     const G = X.G, R = X.R, b = R.boss;
-    if (b.phase !== 'cool') { on.toast(X.fmt(LORE.messages.hot)); on.sound('clang'); return; }
+    const open = b.type === 'thorn' ? b.phase === 'open' : b.phase === 'cool';
+    if (!open) { on.toast(X.fmt(X.bossLore(b.type).closed)); on.sound('clang'); return; }
     b.hp -= 1; b.hits += 1; b.flash = 1;
     on.sound('boss'); on.fx('hit', { x: b.x, y: b.y });
     if (b.hp <= 0) { defeatBoss(); return; }
@@ -238,10 +287,12 @@ BamberEngine.part((X) => {
     const [dx, dy] = DIRS[G.face];
     if (X.heroCanStand(G.px - 2 * dx, G.py - 2 * dy)) { G.px -= 2 * dx; G.py -= 2 * dy; }
     else if (X.heroCanStand(G.px - dx, G.py - dy)) { G.px -= dx; G.py -= dy; }
-    b.phase = 'recoil'; b.t = 1;
+    b.phase = 'recoil'; b.t = 1; b.waves = 0;
+    R.marks = [];
   };
   function defeatBoss() {
     const R = X.R, b = R.boss;
+    const lore = X.bossLore(b.type);
     R.boss = null;
     R.embers = []; R.cracks = {}; R.marks = [];
     const f = X.F();
@@ -249,6 +300,6 @@ BamberEngine.part((X) => {
     X.dropRewards(R, b.x, b.y, f);
     X.solve(true);
     on.sound('fanfare');
-    on.dialog(X.pages(LORE.boss.defeat), X.cap(X.fmt(LORE.boss.name)));
+    on.dialog(X.pages(lore.defeat), X.cap(X.fmt(lore.name)));
   }
 });

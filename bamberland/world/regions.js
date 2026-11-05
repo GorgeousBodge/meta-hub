@@ -12,6 +12,9 @@
    PAGES  map pages. A room goes on its region's page unless it says
           page: 'other'. Each room gives its square with at: [column, row].
 
+   tint   colour of its dungeons' walls (leave it out for the cyan)
+   cut    cut scene played when its Sunstone comes back (data/cutscenes.js)
+
    SHOPS  which elixirs (data/lore.js) each shopkeeper sells.
 
    TELKPERSON  pops up when Bodge walks into a room, once per event:
@@ -25,12 +28,13 @@ window.BAMBER_WORLD = {
   start: 'village',
 
   regions: {
-    wood: { name: "The Queen's Wood", music: 'wood', sun: 'sun_wood' },
-    mill: { name: 'Millbrook Vale', music: 'wood', sun: 'sun_mill' },
+    wood: { name: "the Queen's Wood", music: 'wood', sun: 'sun_wood', tint: '#7fdc5a', cut: 'sunstone_wood' },
+    mill: { name: 'Millbrook Vale', music: 'wood', sun: 'sun_mill', cut: 'sunstone_mill' },
   },
 
   pages: {
     wood: "The Queen's Wood",
+    hollowoak: 'The Hollow Oak',
     mill: 'Millbrook Vale',
     sunkmill: 'The Sunk Mill',
   },
@@ -58,6 +62,22 @@ window.BAMBER_WORLD = {
       hint: 'The Hollow Oak is at the north edge of the wood.',
     },
     {
+      id: 'oak-door', enter: 'glade',
+      lines: [
+        "That's the Hollow Oak. Usually it hums. Today it's growling.",
+        "Whatever's sulking at the top, give it a good thwack. I'll wait out here. Guarding things.",
+      ],
+      hint: 'Find the heart of the Hollow Oak, at the very top.',
+    },
+    {
+      id: 'wood-sun', enter: ['glade', 'woodpath', 'village'], if: 'sun_wood',
+      lines: [
+        "The wood's got its colour back! And the brambles on the west road have withered away.",
+        "Go and see {brendan} first. He's been polishing an anvil all morning, which is unlike him.",
+      ],
+      hint: '{brendan} in the village can reforge the {weapon}. Then west to Millbrook Vale.',
+    },
+    {
       id: 'vale-first', enter: 'vale',
       lines: [
         "Millbrook Vale. The wheel's stopped and the river's sulking.",
@@ -69,9 +89,9 @@ window.BAMBER_WORLD = {
       id: 'vale-sun', enter: 'vale', if: 'sun_mill',
       lines: [
         "Look at it! Green again. Bluer river, too. You did that.",
-        "One Sunstone down. Back to the wood with you, the Hollow Oak's waiting.",
+        "Two Sunstones home. The rest of Bamberland's waiting, once the roads open up.",
       ],
-      hint: 'The Hollow Oak waits at the north edge of the wood.',
+      hint: 'More of Bamberland opens in the next update.',
     },
   ],
 

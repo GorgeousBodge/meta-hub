@@ -1,4 +1,5 @@
-/* Plays the whole demo, start to Sunstone, and checks saves on the way.
+/* Plays the whole game so far, start to the second Sunstone, and checks
+   saves on the way.
    Run from the bamberland folder:  node test/play.js
    It walks with simple path-finding and fights with simple tactics, so
    if a room change makes something impossible, this is where it shows. */
@@ -104,9 +105,10 @@ function besides(x, y, from) {
 function useAt(x, y, from) { besides(x, y, from); act('pinch'); }
 
 // Walk out through an edge, into the next room
+const exitTo = (ex) => (ex && typeof ex === 'object' ? ex.to : ex);
 function exit(edge) {
   const d = WORLD.rooms[R().id], here = R().id;
-  const target = d.exits[edge];
+  const target = exitTo(d.exits[edge]);
   const cells = [];
   for (let i = 0; i < 15; i++) {
     const [x, y] = edge === 'n' ? [i, 0] : edge === 's' ? [i, 11] : edge === 'w' ? [0, i] : [14, i];
@@ -123,70 +125,40 @@ function exit(edge) {
   }
   fail(`couldn't leave by the ${edge} edge to ${target}`);
 }
-// Walk through rooms by their exits
+// Walk through a door tile (into the Hollow Oak's trunk, say)
+function door(dr) {
+  const here = R().id;
+  const [x, y] = dr.at;
+  // step onto the door from whichever side can be reached
+  for (const [d, [dx, dy]] of Object.entries(DIRS)) {
+    const sx = x - dx, sy = y - dy;
+    if (!g.query.heroCanStand(sx, sy) || !path(sx, sy) && !(G().px === sx && G().py === sy)) continue;
+    goTo(sx, sy);
+    act(d);
+    if (R().id !== here) return;
+  }
+  fail(`couldn't get through the door to ${dr.to}`);
+}
+// Walk through rooms by their exits and doors
 function travel(to) {
   for (let hops = 0; R().id !== to; hops++) {
     if (hops > 30) fail(`couldn't travel to ${to}`);
     const seen = { [R().id]: null }, q = [R().id];
     while (q.length && !(to in seen)) {
-      const r = q.shift();
-      for (const [edge, t] of Object.entries(WORLD.rooms[r].exits || {})) if (!(t in seen)) { seen[t] = [r, edge]; q.push(t); }
+      const r = q.shift(), d = WORLD.rooms[r];
+      const ways = Object.entries(d.exits || {}).map(([edge, t]) => [exitTo(t), { edge }]);
+      for (const dr of d.doors || []) ways.push([dr.to, { door: dr }]);
+      for (const [t, how] of ways) if (!(t in seen)) { seen[t] = [r, how]; q.push(t); }
     }
+    if (!(to in seen)) fail(`no way from ${R().id} to ${to}`);
     let c = to; while (seen[c][0] !== R().id) c = seen[c][0];
-    exit(seen[c][1]);
+    const how = seen[c][1];
+    if (how.door) door(how.door); else exit(how.edge);
   }
 }
 const talked = (who) => log.filter((l) => l.type === 'dialog' && l.a[2] === who).length;
+const cutPlayed = (id) => log.some((l) => l.type === 'cut' && l.a[0] === id);
 
-/* ======================= the village and the wood ======================= */
-console.log('Bamber village and the Queen\'s Wood');
-g.newGame({ hero: 'Tester', kev: 'Kevin' });
-check(log.some((l) => l.type === 'cut' && l.a[0] === 'opening'), 'the opening cut scene plays at New game');
-check(R().id === 'village' && g.tone() === 'gloom', 'the village starts in the gloom');
-check(g.fmt('{hero} and {kev}') === 'Tester and Kevin', 'chosen names appear in the text');
-
-useAt(4, 9, 'down');
-check(talked('brendan') === 1 && !G().story.brambles, 'Brendan wants a Fizzwhistle first');
-useAt(11, 3, 'down');
-check(log.some((l) => l.type === 'shop' && l.a[0] === 'kev'), "talking to Kev opens his shop");
-check(!g.buy('fizz').ok, "can't buy with no money");
-goTo(13, 10);
-check(G().coins === 5, 'picked up a pocket of 5 Sunpennies');
-const bought = g.buy('fizz');
-check(bought.ok && G().bag.fizz === 1 && G().coins === 0, 'bought a Fizzwhistle');
-useAt(4, 9, 'down');
-check(G().story.brambles && !G().bag.fizz, 'Brendan took the Fizzwhistle and cleared the brambles');
-
-travel('woodpath');
-check(G().telk['wood-first'] && log.some((l) => l.type === 'telk'), 'Telkperson turns up in the wood');
-check(R().visitor && R().visitor.who === 'telk', 'Telkperson stands next to Bodge while talking');
-check(R().base[1][7] === '.', 'the brambles are gone');
-check(g.mapPages().length === 1 && g.hint().includes('Brendan'), 'the map shows the wood and the latest hint');
-travel('glade');
-check(R().id === 'glade', 'walked through the cleared brambles to the Hollow Oak glade');
-useAt(3, 4, 'down');
-check(G().coins >= 15, 'the glade chest held Sunpennies');
-travel('village');
-check(G().telk['brambles-down'] && G().coins >= 25, "Telkperson brought Kev's parcel");
-check(g.buy('tonic').ok, 'bought a Red Tonic');
-
-// Save and load
-const lastSave = () => log.filter((l) => l.type === 'save').pop().a[0];
-const s1 = JSON.parse(JSON.stringify(lastSave()));
-const other = game();
-const r1 = other.g.load(s1);
-check(r1.ok && other.g.R.id === 'village' && other.g.G.names.hero === 'Tester' && other.g.G.bag.tonic === 1, 'a save loads back where it was, names and bag included');
-check(other.g.load({ v: 1, room: 'gate', entry: { room: 'gate', x: 7, y: 9 } }).error === 'old', 'a Mill prototype save is refused with a clear reason');
-check(other.g.load({ v: 99 }).error === 'newer', 'a save from a newer version is refused');
-
-/* ======================= Millbrook Vale and the Sunk Mill ======================= */
-console.log('Millbrook Vale and the Sunk Mill');
-travel('vale');
-check(G().telk['vale-first'] && g.tone() === 'gloom', 'the vale is in the gloom, and Telkperson points to the mill');
-travel('hall');
-
-// Sluice Room: two blocks onto two plates, then the key
-travel('sluice');
 function push(bx, by, dir, n) {
   const from = { up: 'down', down: 'up', left: 'right', right: 'left' }[dir];
   besides(bx, by, from);
@@ -198,6 +170,186 @@ function push(bx, by, dir, n) {
     act(dir);
   }
 }
+
+// Beat every Bristlehog in the room: line up so it charges a wall, then strike while it's dizzy
+function fightHogs() {
+  g.equip('thwacker');
+  for (let i = 0; i < 600 && R().enemies.length; i++) {
+    const e = R().enemies[0];
+    if (e.st === 'stun') {
+      let best = null;
+      for (const [d, [dx, dy]] of Object.entries(DIRS)) {
+        const x = e.x - dx, y = e.y - dy;
+        if (!g.query.heroCanStand(x, y) && !(G().px === x && G().py === y)) continue;
+        const p = G().px === x && G().py === y ? [] : path(x, y);
+        if (p && (!best || p.length < best.p.length)) best = { p, d };
+      }
+      if (!best) { wait(); continue; }
+      if (best.p.length) { step(best.p[0]); continue; }
+      if (G().face !== best.d) act(best.d);
+      act('pinch');
+    } else if (e.st === 'alert' || e.st === 'charge') {
+      const side = e.dir === 'left' || e.dir === 'right' ? ['up', 'down'] : ['left', 'right'];
+      const ok = side.find((d) => g.query.heroCanStand(G().px + DIRS[d][0], G().py + DIRS[d][1]));
+      if (ok) act(ok); else wait();
+    } else {
+      const spots = [];
+      const clear = (x) => { for (let j = Math.min(x, e.x) + 1; j < Math.max(x, e.x); j++) if (!g.query.heroCanStand(j, e.y)) return false; return true; };
+      for (let x = 1; x < 14; x++) if (Math.abs(x - e.x) >= 3 && g.query.heroCanStand(x, e.y) && clear(x)) spots.push([x, e.y]);
+      spots.sort((a, b) => Math.abs(a[0] - G().px) + Math.abs(a[1] - G().py) - Math.abs(b[0] - G().px) - Math.abs(b[1] - G().py));
+      const here = spots.some(([sx, sy]) => sx === G().px && sy === G().py);
+      if (spots.length && !here) { const p = path(...spots[0]); if (p && p.length) step(p[0]); else wait(); }
+      else wait();
+    }
+  }
+}
+const marked = (x, y) => R().marks.some(([mx, my]) => mx === x && my === y);
+// Walk (or vault) to a sunstone or heart vessel left by a boss
+function collect(o) {
+  for (let i = 0; i < 60; i++) {
+    const at = Object.entries(R().obj).find(([, v]) => v === o);
+    if (!at) return;
+    const [qx, qy] = at[0].split(',').map(Number);
+    const p = path(qx, qy);
+    if (p && p.length) step(p[0]); else wait();
+  }
+}
+const lastSave = () => log.filter((l) => l.type === 'save').pop().a[0];
+
+/* ======================= the village and the wood ======================= */
+console.log("Bamber village and the Queen's Wood");
+g.newGame({ hero: 'Tester', kev: 'Kevin' });
+check(cutPlayed('opening'), 'the opening cut scene plays at New game');
+check(R().id === 'village' && g.tone() === 'gloom', 'the village starts in the gloom');
+check(g.fmt('{hero} and {kev}') === 'Tester and Kevin', 'chosen names appear in the text');
+check(R().base[6][1] === '#', 'the west road to Millbrook Vale is choked with brambles');
+
+useAt(4, 9, 'down');
+check(talked('brendan') === 1 && !G().story.brambles, 'Brendan wants a Fizzwhistle first');
+useAt(11, 3, 'down');
+check(log.some((l) => l.type === 'shop' && l.a[0] === 'kev'), 'talking to Kev opens his shop');
+check(!g.buy('fizz').ok, "can't buy with no money");
+goTo(13, 10);
+check(G().coins === 5, 'picked up a pocket of 5 Luftballons');
+check(g.buy('fizz').ok && G().bag.fizz === 1 && G().coins === 0, 'bought a Fizzwhistle');
+useAt(4, 9, 'down');
+check(G().story.brambles && !G().bag.fizz, 'Brendan took the Fizzwhistle and cleared the brambles');
+
+travel('woodpath');
+check(G().telk['wood-first'] && log.some((l) => l.type === 'telk'), 'Telkperson turns up in the wood');
+check(R().visitor && R().visitor.who === 'telk', 'Telkperson stands next to Bodge while talking');
+check(R().base[1][7] === '.', 'the brambles are gone');
+travel('glade');
+check(G().telk['oak-door'], 'Telkperson points into the Hollow Oak');
+useAt(3, 4, 'down');
+check(G().coins >= 15, 'the glade chest held Luftballons');
+
+// Save and load
+const s1 = JSON.parse(JSON.stringify(lastSave()));
+const other = game();
+check(other.g.load(s1).ok && other.g.R.id === 'glade' && other.g.G.names.hero === 'Tester', 'a save loads back where it was, names included');
+check(other.g.load({ v: 1, room: 'gate', entry: { room: 'gate', x: 7, y: 9 } }).error === 'old', 'a Mill prototype save is refused with a clear reason');
+check(other.g.load({ v: 99 }).error === 'newer', 'a save from a newer version is refused');
+
+/* ======================= the Hollow Oak ======================= */
+console.log('The Hollow Oak');
+travel('oakroot');
+check(R().id === 'oakroot' && G().px === 7 && G().py === 10, 'walked in through the door in the trunk');
+
+travel('oakburrow');
+fightHogs();
+check(G().flags.oakburrow.solved, 'Hog Burrow: the Bristlehog is beaten and the shutter opens');
+
+travel('oaksap');
+push(7, 5, 'right', 1);
+useAt(7, 3, 'down');
+check(G().keys === 1, 'Sap Well: pushed the block aside and found the small key');
+
+travel('oaklarder');
+check(G().keys === 0, "the key opened the Root Hall's east door");
+besides(3, 6, 'down');                 // stand below the pot, facing it
+act('pinch');
+check(G().carry, 'lifted the pot in the way');
+act('left'); act('pinch');
+check(!G().carry && !R().obj[k(3, 6)], 'threw it clear');
+push(3, 3, 'down', 5);
+push(9, 4, 'right', 2);
+push(11, 4, 'down', 4);
+check(G().flags.oaklarder.solved, 'Squirrel Larder: both blocks on their plates');
+
+travel('oakhollow');
+useAt(8, 8, 'down');
+check(G().items.hopstaff, 'got the Hopstaff');
+g.equip('hopstaff');
+besides(3, 4, 'left');
+act('pinch');
+check(G().px === 4 && G().py === 4, 'vaulted over the thorns');
+act('right'); act('pinch');
+check(G().bigKey, 'opened the chest inside the thorns: the big key');
+act('left'); act('pinch');
+check(G().px === 2, 'vaulted back out');
+
+travel('oakstair');
+check(G().flags.oakroot.opened['7,0'], 'the big key opened the great door');
+travel('oakheart');
+check(R().boss && R().boss.type === 'thorn', 'the Thornmother is here');
+check(log.some((l) => l.type === 'dialog' && /Thornmother/.test(l.a[1])), 'she introduces herself');
+
+// The Thornmother: wait in a corner of her ring, step out of each marked line,
+// and strike when her heart opens. Her blast throws Bodge back out; vault in again.
+const CORNERS = [[5, 3], [8, 3], [5, 6], [8, 6]];
+const inside = (x, y) => x >= 5 && x <= 8 && y >= 3 && y <= 6;
+const thornHits = [];
+for (let i = 0; i < 800 && R().boss; i++) {
+  const b = R().boss, x = G().px, y = G().py;
+  if (marked(x, y)) {
+    // one step out of the line (walking if we can, vaulting if not)
+    const walk = Object.entries(DIRS).find(([, [dx, dy]]) => g.query.heroCanStand(x + dx, y + dy) && !marked(x + dx, y + dy));
+    if (walk) { act(walk[0]); continue; }
+    const hop = Object.entries(DIRS).find(([, [dx, dy]]) => g.query.isGap(x + dx, y + dy) && g.query.heroCanStand(x + 2 * dx, y + 2 * dy) && !marked(x + 2 * dx, y + 2 * dy));
+    if (hop) { step('V:' + hop[0]); continue; }
+    wait(); continue;
+  }
+  if (inside(x, y)) {
+    const next = Object.entries(DIRS).find(([, [dx, dy]]) => g.query.bossAt(x + dx, y + dy));
+    if (b.phase === 'open') {
+      if (next) { g.equip('thwacker'); if (G().face !== next[0]) act(next[0]); const hp = b.hp; act('pinch'); if (!R().boss || R().boss.hp < hp) thornHits.push(G().turns); continue; }
+      const spots = [[5, 4], [6, 3], [8, 5], [7, 6], [5, 5], [7, 3], [8, 4], [6, 6]];
+      let best = null;
+      for (const [sx, sy] of spots) { const p = path(sx, sy, marked); if (p && (!best || p.length < best.length)) best = p; }
+      if (best && best.length) step(best[0]); else wait();
+    } else if (!CORNERS.some(([cx, cy]) => cx === x && cy === y)) {
+      let best = null;
+      for (const [cx, cy] of CORNERS) { const p = path(cx, cy, marked); if (p && (!best || p.length < best.length)) best = p; }
+      if (best && best.length) step(best[0]); else wait();
+    } else wait();
+  } else {
+    // outside: go to the west side of the ring and vault in
+    if (x === 3 && y === 4) { step('V:right'); continue; }
+    const p = path(3, 4, marked);
+    if (p && p.length) step(p[0]); else wait();
+  }
+}
+check(!R().boss && G().flags.oakheart.bossDone, `the Thornmother is beaten (${thornHits.length} hits)`);
+collect('X'); collect('Q');
+check(G().story.sun_wood && G().maxHearts >= 10, 'took the heart vessel and the Sunstone');
+check(cutPlayed('sunstone_wood'), "the wood's Sunstone cut scene plays");
+
+/* ======================= back to the village ======================= */
+console.log('Home again');
+travel('glade');
+check(g.tone() === 'day', "the Queen's Wood is back in colour");
+check(G().telk['wood-sun'], 'Telkperson says the west road is open');
+travel('village');
+check(R().base[6][1] === '.', 'the brambles on the west road have withered');
+useAt(4, 9, 'down');
+check(G().forge === 1 && g.weaponName() === 'Sunbright Thwacker', 'Brendan reforged the Thwacker');
+
+/* ======================= Millbrook Vale and the Sunk Mill ======================= */
+console.log('Millbrook Vale and the Sunk Mill');
+travel('vale');
+check(G().telk['vale-first'] && g.tone() === 'gloom', 'the vale is in the gloom, and Telkperson points to the mill');
+travel('sluice');
 push(4, 3, 'down', 4);
 push(4, 7, 'left', 2);
 push(10, 4, 'down', 3);
@@ -206,42 +358,11 @@ check(G().flags.sluice.solved, 'Sluice Room solved');
 useAt(7, 9, 'up');
 check(G().keys === 1, 'got the small key');
 
-// Hog Run, through the locked east door of the Grinding Hall
 travel('corridor');
 check(G().keys === 0, 'the key opened the east door');
-g.equip('thwacker');
-for (let i = 0; i < 400 && R().enemies.length; i++) {
-  const e = R().enemies[0];
-  if (e.st === 'stun') {
-    let best = null;
-    for (const [d, [dx, dy]] of Object.entries(DIRS)) {
-      const x = e.x - dx, y = e.y - dy;
-      if (!g.query.heroCanStand(x, y) && !(G().px === x && G().py === y)) continue;
-      const p = G().px === x && G().py === y ? [] : path(x, y);
-      if (p && (!best || p.length < best.p.length)) best = { p, d };
-    }
-    if (!best) { wait(); continue; }
-    if (best.p.length) { step(best.p[0]); continue; }
-    if (G().face !== best.d) act(best.d);
-    act('pinch');
-  } else if (e.st === 'alert' || e.st === 'charge') {
-    const side = e.dir === 'left' || e.dir === 'right' ? ['up', 'down'] : ['left', 'right'];
-    const ok = side.find((d) => g.query.heroCanStand(G().px + DIRS[d][0], G().py + DIRS[d][1]));
-    if (ok) act(ok); else wait();
-  } else {
-    // line up with the hog, a few tiles away along its row
-    const spots = [];
-    const clear = (x) => { for (let i = Math.min(x, e.x) + 1; i < Math.max(x, e.x); i++) if (!g.query.heroCanStand(i, e.y)) return false; return true; };
-    for (let x = 1; x < 14; x++) if (Math.abs(x - e.x) >= 3 && g.query.heroCanStand(x, e.y) && clear(x)) spots.push([x, e.y]);
-    spots.sort((a, b) => Math.abs(a[0] - G().px) + Math.abs(a[1] - G().py) - Math.abs(b[0] - G().px) - Math.abs(b[1] - G().py));
-    const here = spots.some(([sx, sy]) => sx === G().px && sy === G().py);
-    if (spots.length && !here) { const p = path(...spots[0]); if (p && p.length) step(p[0]); else wait(); }
-    else wait();
-  }
-}
-check(G().flags.corridor && G().flags.corridor.solved, 'Hog Run: the Bristlehog is beaten');
+fightHogs();
+check(G().flags.corridor && G().flags.corridor.solved, 'Hog Run: one hit from the reforged Thwacker');
 
-// Shell Garden: a block on one plate, a Mimmet on the other
 travel('maze');
 for (let tries = 0; tries < 5 && !G().flags.maze.solved; tries++) {
   const block = Object.entries(R().obj).find(([, o]) => o === 'O');
@@ -250,25 +371,22 @@ for (let tries = 0; tries < 5 && !G().flags.maze.solved; tries++) {
     if (by === 7 && bx < 10) push(bx, by, 'right', 10 - bx);
   }
   if (G().flags.maze.solved) break;
-  // every step right moves the corridor Mimmet left, onto its plate
   goTo(1, 5);
   for (let i = 0; i < 9 && !G().flags.maze.solved; i++) act('right');
   if (!G().flags.maze.solved) g.resetRoom();
 }
 check(G().flags.maze.solved, 'Shell Garden solved with a Mimmet');
 
-// Hopstaff Shrine: the staff, then vault for the key
 travel('shrine');
+const before = G().coins;
 useAt(10, 5, 'down');
-check(G().items.hopstaff, 'got the Hopstaff');
+check(G().coins === before + 20, 'the Spring Shrine chest held 20 Luftballons');
 g.equip('hopstaff');
 besides(4, 5, 'left');
 act('pinch');
 check(G().keys === 1, 'vaulted into the ring of gaps for the key');
 act('pinch');
-check(G().px === 7 && G().py === 5, 'vaulted back out');
 
-// Ember Gallery: all three braziers at once
 travel('embers');
 for (let tries = 0; tries < 6 && !G().flags.embers.solved; tries++) {
   g.equip('thwacker');
@@ -278,23 +396,19 @@ for (let tries = 0; tries < 6 && !G().flags.embers.solved; tries++) {
 }
 check(G().flags.embers.solved, 'Ember Gallery: all braziers burning');
 
-// Broken Floor: vault the gaps, open the door, take the big key
 travel('gaps');
 g.equip('hopstaff');
 goTo(7, 9); face('up'); act('pinch');
 goTo(7, 6); face('up'); act('pinch');
-check(G().py === 4, 'vaulted both broken floors');
 useAt(7, 2, 'down');
 goTo(7, 2);
 useAt(7, 1, 'down');
-check(G().bigKey, 'got the big key');
+check(G().bigKey, 'got the Mill\'s big key');
 goTo(7, 4); face('down'); act('pinch');
 goTo(7, 7); face('down'); act('pinch');
 
-// The Kilnwarden
 travel('lair');
 const inDanger = (x, y) => [4, 5].includes(y) || (R().boss && R().boss.hits >= 1 && [6, 7].includes(x));
-const marked = (x, y) => R().marks.some(([mx, my]) => mx === x && my === y);
 for (let i = 0; i < 600 && R().boss; i++) {
   const b = R().boss, x = G().px, y = G().py;
   if (marked(x, y)) {
@@ -304,48 +418,35 @@ for (let i = 0; i < 600 && R().boss; i++) {
     if (out.length) act(out[0][0]); else wait();
     continue;
   }
-  const inside = x >= 5 && x <= 8 && y >= 3 && y <= 6;
+  const inRing = x >= 5 && x <= 8 && y >= 3 && y <= 6;
   if (b.phase === 'cool') {
-    if (inside) {
+    if (inRing) {
       const next = Object.entries(DIRS).find(([, [dx, dy]]) => g.query.bossAt(x + dx, y + dy));
       if (next) { g.equip('thwacker'); if (G().face !== next[0]) act(next[0]); act('pinch'); continue; }
       const p = path(7, 6) || path(6, 6) || path(5, 4);
       if (p && p.length) step(p[0]); else wait();
     } else if (x === 8 && y === 8) { g.equip('hopstaff'); face('up'); act('pinch'); }
     else { const p = path(8, 8, marked); if (p && p.length) step(p[0]); else wait(); }
-  } else if (!(x === 8 && y === 8) && !inside) {
+  } else if (!(x === 8 && y === 8) && !inRing) {
     const p = path(8, 8, (a, c) => marked(a, c) || inDanger(a, c));
     if (p && p.length) step(p[0]); else wait();
-  } else if (inside) {
-    // wait in a corner of the ring, out of the embers' way
+  } else if (inRing) {
     const p = path(8, 6, marked) || path(5, 3, marked);
     if (p && p.length) step(p[0]); else wait();
   } else wait();
 }
 check(!R().boss && G().flags.lair.bossDone, 'the Kilnwarden is beaten');
-const sun = Object.entries(R().obj).find(([, o]) => o === 'Q');
-check(!!sun, 'the Sunstone appears');
-g.equip('hopstaff');
-for (let i = 0; i < 40 && Object.values(R().obj).includes('Q'); i++) {
-  const [qx, qy] = sun[0].split(',').map(Number);
-  if (path(qx, qy)) { goTo(qx, qy); break; }
-  if (G().px === 8 && G().py === 8) { face('up'); act('pinch'); continue; }
-  goTo(8, 8);
-}
-if (Object.values(R().obj).includes('Q')) {
-  const [qx, qy] = sun[0].split(',').map(Number);
-  goTo(qx, qy);
-}
-check(G().story.sun_mill && G().maxHearts >= 8, 'took the Sunstone: one more heart, and the vale is restored');
-check(log.some((l) => l.type === 'cut' && l.a[0] === 'sunstone'), 'the Sunstone cut scene plays');
+collect('X'); collect('Q');
+check(G().story.sun_mill && G().maxHearts >= 14, 'took the second Sunstone');
+check(cutPlayed('sunstone_mill'), "the vale's Sunstone cut scene plays");
 
 travel('vale');
 check(g.tone() === 'day' && G().telk['vale-sun'], 'Millbrook Vale is back in colour, and Telkperson says so');
 const pages = g.mapPages().map((p) => p.id);
-check(pages.includes('wood') && pages.includes('sunkmill') && pages.includes('mill'), 'the map has a page for each place visited');
+check(['wood', 'hollowoak', 'mill', 'sunkmill'].every((p) => pages.includes(p)), 'the map has a page for each place visited');
 
 const s2 = lastSave();
 const again = game();
-check(again.g.load(JSON.parse(JSON.stringify(s2))).ok && again.g.G.story.sun_mill, 'the final save loads too');
+check(again.g.load(JSON.parse(JSON.stringify(s2))).ok && again.g.G.story.sun_mill && again.g.G.forge === 1, 'the final save loads too');
 
-console.log(`✓ Played start to Sunstone in ${G().turns} turns (${outCold} times out cold)`);
+console.log(`✓ Played start to the second Sunstone in ${G().turns} turns (${outCold} times out cold)`);

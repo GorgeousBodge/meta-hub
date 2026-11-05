@@ -52,11 +52,15 @@ window.BAMBER_LORE = {
     thwacker: {
       name: 'Thwacker',
       desc: 'A stubby mallet with a bolt for a head. Knocks foes back a tile.',
+      // Each Sunstone lets Brendan reforge it: one entry per level
+      forged: [
+        { name: 'Sunbright Thwacker', desc: 'Reforged by {brendan} with a Sunstone. Hits twice as hard. Still clangs off anything spiky.' },
+      ],
     },
     hopstaff: {
       name: 'Hopstaff',
       desc: 'A springy pole. Pinch to vault two tiles, over gaps and foes.',
-      found: 'You found the {item}! Press Back, choose it, then pinch to vault over gaps.',
+      found: ['You found the {item}! A springy pole, worn smooth by somebody very bouncy.', 'Press Back, choose it, then pinch to vault two tiles: over gaps, thorns and foes.'],
     },
   },
 
@@ -91,13 +95,13 @@ window.BAMBER_LORE = {
   // Things you pick up or find in chests
   pickups: {
     key: { name: 'Small key', found: 'A small key. It opens one locked door.' },
-    bigkey: { name: 'Big key', found: 'The big key! It fits the great door in the Grinding Hall.' },
+    bigkey: { name: 'Big key', found: 'The big key! It fits the great door of this place.' },
     heart: { name: 'Heart', found: 'Your hearts are full again.' },
     container: { name: 'Heart vessel', found: 'A heart vessel! {hero} can take one more heart of harm.' },
     coins: { found: '{n} {coins}!' },
     sunstone: {
       name: 'Sunstone',
-      found: ['A Sunstone! It hums in {hero}\'s hands, warm as a kettle.', 'One more heart, and the vale outside will have its colour back.'],
+      found: ['A Sunstone! It hums in {hero}\'s hands, warm as a kettle.', 'One more heart, and {region} will have its colour back.'],
     },
   },
 
@@ -107,16 +111,34 @@ window.BAMBER_LORE = {
     mimmet: { name: 'Mimmet', tip: 'Moves only when you do, in mirror: you go left, it goes right.' },
   },
 
-  boss: {
-    name: 'the Kilnwarden',
-    intro: [
-      'A furnace stirs in the dark. Its grate glows like an eye.',
-      'The {boss} wakes. Watch its pattern: only a cool core can be hit.',
-    ],
-    defeat: [
-      'The {boss} cracks, sighs, and goes cold.',
-      'For a moment it sounded a lot like {tori} sulking.',
-    ],
+  /* ---------- bosses: every one is Tori in another shape ----------
+     A boss room says which one with boss: 'thorn'. closed = the toast when
+     Bodge strikes while it can't be hurt.                                */
+  bosses: {
+    thorn: {
+      name: 'the Thornmother',
+      closed: 'Thorny! Wait for her heart to open',
+      intro: [
+        'Brambles writhe at the heart of the oak. In the middle, something beats.',
+        'The {boss} rises. Step out of the marked line before the roots come up, then strike when her heart opens.',
+      ],
+      defeat: [
+        'The {boss} shrivels with a sound like a very small sulk.',
+        'For a moment it sounded exactly like {tori}.',
+      ],
+    },
+    kiln: {
+      name: 'the Kilnwarden',
+      closed: 'Too hot! Wait for it to cool',
+      intro: [
+        'A furnace stirs in the dark. Its grate glows like an eye.',
+        'The {boss} wakes. Watch its pattern: only a cool core can be hit.',
+      ],
+      defeat: [
+        'The {boss} cracks, sighs, and goes cold.',
+        'For a moment it sounded a lot like {tori} sulking.',
+      ],
+    },
   },
 
   // Short messages (toasts). Keep them under about 40 characters.
@@ -129,12 +151,12 @@ window.BAMBER_LORE = {
     gapHint: 'Equip the {item} to vault',
     noVault: 'No room to land',
     clang: 'Clang! Too spiky to hurt',
-    hot: 'Too hot! Wait for it to cool',
     solved: 'Something opened',
     stuck: "It won't budge",
     reset: 'Room reset',
     saved: 'Saved',
     thorns: 'Brambles. Far too thick to push through',
+    thornsLow: 'Thorns. Too sharp to walk through',
     bubble: 'Pop! The bubble took it',
     poor: 'Not enough {coins}',
     full: "Can't carry any more of those",

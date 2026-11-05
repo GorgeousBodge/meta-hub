@@ -15,7 +15,7 @@
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   const EDGE = { up: 'n', down: 's', left: 'w', right: 'e' };
   const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
-  const TERRAIN = '#.~_DBS';
+  const TERRAIN = '#.~_DBS%';          // % in a dungeon: thorns (vault over them, like a gap)
   const OBJECTS = 'OPC=NbLKHX$';
   const ENEMY_CHARS = { h: 'hog', w: 'wisp', m: 'mimmet' };
   const SOLID_OBJ = 'OPCc=NblL';
@@ -81,8 +81,9 @@
       const w = {
         hero: nameOf('hero'), world: LORE.world,
         dungeon: (R && def() && def().dungeon) || LORE.dungeon,
-        weapon: LORE.items.thwacker.name, item: LORE.items.hopstaff.name,
-        boss: LORE.boss.name, coin: LORE.money.one, coins: LORE.money.many,
+        weapon: weaponName(), item: LORE.items.hopstaff.name,
+        boss: bossLore().name, coin: LORE.money.one, coins: LORE.money.many,
+        region: (R && def() && (WORLD.regions[def().region] || {}).name) || LORE.world,
       };
       for (const [id, e] of Object.entries(LORE.enemies || {})) w[id] = e.name;
       for (const id of Object.keys(LORE.people || {})) w[id] = nameOf(id);
@@ -92,6 +93,16 @@
       const w = extra ? { ...words(), ...extra } : words();
       return String(s == null ? '' : s).replace(/\{(\w+)\}/g, (m, n) => (n in w ? w[n] : m));
     };
+    // The boss of the current room (or the Kilnwarden, outside one)
+    function bossLore(type) {
+      const t = type || (R && def() && def().boss) || 'kiln';
+      return LORE.bosses[t] || LORE.bosses.kiln;
+    }
+    // The Thwacker's name goes up each time Brendan reforges it
+    function weaponName() {
+      const t = LORE.items.thwacker, lv = (G && G.forge) || 0;
+      return lv && t.forged && t.forged[lv - 1] ? t.forged[lv - 1].name : t.name;
+    }
     const pages = (x, extra) => (Array.isArray(x) ? x : [x]).map((s) => fmt(s, extra));
     const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -113,6 +124,7 @@
         telk: {},           // Telkperson events done
         hint: '',
         entry: null,
+        forge: 0,           // times Brendan has reforged the Thwacker
         turns: 0, drops: 0,
         over: false, won: false,
       };
@@ -169,6 +181,12 @@
         const cells = b.solid || [[b.x, b.y], [b.x + 1, b.y], [b.x, b.y + 1], [b.x + 1, b.y + 1]];
         for (const [x, y] of cells) if (inB(x, y)) room.base[y][x] = '#';
       }
+      // Doors (into a building, a cave…): a tile that takes Bodge to another room
+      room.doors = {};
+      for (const dr of d.doors || []) {
+        const [x, y] = dr.at;
+        if (inB(x, y)) { room.base[y][x] = '.'; room.doors[key(x, y)] = dr; }
+      }
       // Remembered changes
       for (const k of Object.keys(f.opened)) {
         const [x, y] = k.split(',').map(Number);
@@ -186,7 +204,7 @@
         const xs = room.bossTiles.map((t) => t[0]), ys = room.bossTiles.map((t) => t[1]);
         const bx = Math.min(...xs), by = Math.min(...ys);
         if (f.bossDone) dropRewards(room, bx, by, f);
-        else room.boss = { x: bx, y: by, hp: BOSS_HP, hits: 0, phase: 'wake', t: 2, flash: 0 };
+        else room.boss = { type: d.boss || 'kiln', x: bx, y: by, hp: BOSS_HP, hits: 0, phase: 'wake', t: 2, flash: 0, waves: 0 };
       }
       return room;
     }
@@ -210,7 +228,7 @@
     const baseAt = (x, y) => (inB(x, y) ? R.base[y][x] : '#');
     const objAt = (x, y) => R.obj[key(x, y)] || '';
     const cracked = (x, y) => !!R.cracks[key(x, y)];
-    const isGap = (x, y) => baseAt(x, y) === '~' || cracked(x, y);
+    const isGap = (x, y) => baseAt(x, y) === '~' || baseAt(x, y) === '%' || cracked(x, y);
     const enemyAt = (x, y) => R.enemies.find((e) => e.x === x && e.y === y) || null;
     const emberAt = (x, y) => R.embers.find((e) => e.x === x && e.y === y) || null;
     function bossAt(x, y) {
@@ -243,7 +261,7 @@
       return dy > 0 ? 'down' : 'up';
     }
     Object.assign(X, {
-      fmt, pages, cap, nameOf, def, F, flags, refreshThorns,
+      fmt, pages, cap, nameOf, def, F, flags, refreshThorns, bossLore,
       baseAt, objAt, cracked, isGap, enemyAt, emberAt, bossAt, isHero,
       floorish, heroCanStand, enemyCanStand, front, dist, toward,
     });
@@ -285,7 +303,7 @@
       if (first && def().cut) on.cut(def().cut);
       if (R.boss && !f.seen) {
         f.seen = true;
-        on.dialog(pages(LORE.boss.intro), cap(fmt(LORE.boss.name)));
+        on.dialog(pages(bossLore().intro), cap(fmt(bossLore().name)));
       }
       if (!quiet) for (const h of X.enterHooks) h(id);
       on.change();
@@ -302,7 +320,15 @@
     X.nearestStand = nearestStand;
     function exitTo(dir) {
       const exits = def().exits || {};
-      const target = exits[EDGE[dir]];
+      const ex = exits[EDGE[dir]];
+      if (ex && typeof ex === 'object') {
+        // an exit to a set spot: { to: 'glade', x: 7, y: 4, face: 'down' }
+        if (!WORLD.rooms[ex.to]) return false;
+        on.sound('door');
+        enterRoom(ex.to, ex.x, ex.y, ex.face || dir);
+        return true;
+      }
+      const target = ex;
       if (!target || !WORLD.rooms[target]) return false;
       let x = G.px, y = G.py;
       if (dir === 'up') y = H - 1;
@@ -369,6 +395,12 @@
       }
       G.px = nx; G.py = ny;
       G.step = (G.step || 0) + 1;
+      const door = R.doors[key(nx, ny)];
+      if (door && WORLD.rooms[door.to]) {
+        on.sound('door');
+        enterRoom(door.to, door.x, door.y, door.face || dir);
+        return true;
+      }
       on.sound('step');
       stepOn();
       world({ moved: dir });
@@ -381,6 +413,7 @@
       else if (t === 'D') on.toast(fmt(G.keys > 0 ? M.unlock : M.locked));
       else if (t === 'B') on.toast(fmt(G.bigKey ? M.unlock : M.bigLocked));
       else if (t === 'S') on.toast(fmt(M.sealed));
+      else if (baseAt(x, y) === '%' && !G.items.hopstaff) on.toast(fmt(M.thornsLow));
       else if (isGap(x, y)) {
         if (!G.items.hopstaff) on.toast(fmt(M.gap));
         else if (G.equip !== 'hopstaff') on.toast(fmt(M.gapHint));
@@ -478,7 +511,7 @@
         G.maxHearts += 2; G.hearts = G.maxHearts;
         on.sound('fanfare');
         save();
-        on.cut('sunstone');
+        on.cut(region.cut || 'sunstone');
         on.dialog(pages(P.sunstone.found), fmt(P.sunstone.name));
         return;
       } else if (kind === 'ending') {
@@ -706,7 +739,7 @@
       get G() { return G; },
       get R() { return R; },
       W, H, DIRS, SAVE_VERSION,
-      fmt, pages, nameOf, tone, migrate,
+      fmt, pages, nameOf, tone, migrate, weaponName,
       newGame, load, resetRoom, revive, equip, act, pinchVerb,
       snapshot() { return clone({ G, R }); },
       restore(s) { G = clone(s.G); R = clone(s.R); },

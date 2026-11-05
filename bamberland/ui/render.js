@@ -54,8 +54,9 @@
 
     if (R.field) drawField(g, game, hurt);
     else {
-      drawWalls(g, R);
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) drawTile(g, R, q, x, y);
+      const tint = tintOf(R.id);
+      drawWalls(g, R, tint);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) drawTile(g, R, q, x, y, tint);
       // Boss warnings under everything that moves
       for (const [x, y] of R.marks || []) drawMark(g, x, y);
       for (const [k, o] of Object.entries(R.obj)) {
@@ -124,14 +125,21 @@
     if (G.carry) Px.blit(g, Px.art('pot', 'day'), px(G.px) + 4, py(G.py) - 40, 3.2);
   }
 
-  function drawWalls(g, R) {
+  // A region can colour its dungeons' walls (world/regions.js: tint). Default: cyan.
+  const rgba = (hex, a) => `rgba(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(',')},${a})`;
+  function tintOf(roomId) {
+    const W8 = window.BAMBER_WORLD, d = W8 && W8.rooms[roomId];
+    const hex = (d && (d.tint || (W8.regions[d.region] || {}).tint)) || '#3fe0ff';
+    return { full: hex, dim: rgba(hex, 0.38), faint: rgba(hex, 0.07), floor: rgba(hex, 0.16) };
+  }
+  function drawWalls(g, R, tint) {
     const wall = (x, y) => x < 0 || y < 0 || x >= W || y >= H || R.base[y][x] === '#';
     // faint fill
-    g.fillStyle = C.cyanFaint;
+    g.fillStyle = tint.faint;
     noGlow(g);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (wall(x, y)) g.fillRect(px(x), py(y), T, T);
     // bright edges where wall meets floor, with a brick course inside
-    stroke(g, C.cyan, 2, 8);
+    stroke(g, tint.full, 2, 8);
     g.beginPath();
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       if (!wall(x, y)) continue;
@@ -142,7 +150,7 @@
       if (!wall(x + 1, y)) { g.moveTo(X + T, Y); g.lineTo(X + T, Y + T); }
     }
     g.stroke();
-    stroke(g, C.cyanDim, 1, 0);
+    stroke(g, tint.dim, 1, 0);
     g.beginPath();
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       if (!wall(x, y)) continue;
@@ -156,13 +164,14 @@
     g.stroke();
   }
 
-  function drawTile(g, R, q, x, y) {
+  function drawTile(g, R, q, x, y, tint) {
     const t = R.base[y][x], X = px(x), Y = py(y);
     const cracked = R.cracks && R.cracks[x + ',' + y];
     if (t === '#') return;
+    if (t === '%') { Px.blit(g, Px.art('thorns', 'day'), X, Y); return; }
     if (t === '~' || cracked) { drawGap(g, X, Y, !!cracked); return; }
     // floor: a small cross at the tile centre
-    stroke(g, 'rgba(63,224,255,0.16)', 1, 0);
+    stroke(g, tint ? tint.floor : 'rgba(63,224,255,0.16)', 1, 0);
     g.beginPath();
     g.moveTo(X + 18, Y + 20); g.lineTo(X + 22, Y + 20);
     g.moveTo(X + 20, Y + 18); g.lineTo(X + 20, Y + 22);
@@ -415,6 +424,7 @@
   // A squat furnace with a chimney and a grate. Hot = bright amber with a red
   // glow; cooling = dim shell and an open cyan core you can hit.
   function drawBoss(g, b) {
+    if (b.type === 'thorn') { drawThornmother(g, b); return; }
     const X = px(b.x), Y = py(b.y), cx = X + T, cy = Y + T;
     const cool = b.phase === 'cool';
     const col = b.flash ? C.red : cool ? C.amberDim : C.amber;
@@ -449,8 +459,61 @@
     }
   }
 
+  /* ---------- the Thornmother ---------- */
+  // A knot of brambles on two clawed roots. Closed: green and bristling with
+  // amber thorns. Open: the tangle parts and a red heart glows in the middle.
+  function drawThornmother(g, b) {
+    const X = px(b.x), Y = py(b.y), cx = X + T, cy = Y + T;
+    const open = b.phase === 'open';
+    const green = b.flash ? C.red : open ? 'rgba(98,184,69,0.55)' : '#62b845';
+    // the tangle: overlapping loops
+    stroke(g, green, 2.5, open ? 4 : 14);
+    for (const [ox, oy, rx, ry, rot] of [[0, 0, 30, 24, 0.3], [-4, 4, 26, 30, -0.5], [5, -3, 24, 20, 1.2], [0, 6, 32, 18, -0.1]]) {
+      g.beginPath(); g.ellipse(cx + ox, cy + oy, rx, ry, rot, 0, Math.PI * 2); g.stroke();
+    }
+    if (!open) { g.fillStyle = 'rgba(98,184,69,0.12)'; g.beginPath(); g.ellipse(cx, cy, 30, 26, 0, 0, Math.PI * 2); g.fill(); }
+    // thorns round the edge
+    stroke(g, open ? C.amberDim : C.amber, 2, open ? 0 : 8);
+    g.beginPath();
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + 0.2, r1 = 27, r2 = 36;
+      g.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1 * 0.9);
+      g.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2 * 0.9);
+    }
+    g.stroke();
+    // two eyes, cross until the heart opens
+    noGlow(g); g.fillStyle = open ? C.amberDim : C.amber;
+    g.save(); g.translate(cx - 11, cy - 12); g.rotate(open ? 0 : 0.35); g.fillRect(-5, -1.5, 10, 3); g.restore();
+    g.save(); g.translate(cx + 11, cy - 12); g.rotate(open ? 0 : -0.35); g.fillRect(-5, -1.5, 10, 3); g.restore();
+    if (open) {
+      drawHeart(g, cx, cy + 4, 11, C.red);
+      stroke(g, 'rgba(255,92,122,0.6)', 2, 18);
+      g.beginPath(); g.arc(cx, cy + 3, 18, 0, Math.PI * 2); g.stroke();
+      noGlow(g); g.fillStyle = C.red; g.font = `700 12px ${FONT}`; g.textAlign = 'center';
+      g.textBaseline = 'middle'; g.fillText('OPEN ' + b.t, cx, Y - 4 + 2);
+    }
+    // health pips
+    noGlow(g);
+    for (let i = 0; i < 3; i++) {
+      g.fillStyle = i < b.hp ? C.green : 'rgba(89,242,165,0.2)';
+      g.fillRect(cx - 13 + i * 10, Y + 72, 6, 4);
+    }
+  }
+
   /* ---------- effects (one frame each) ---------- */
   function drawFx(g, f, G) {
+    if (f.type === 'roots') {
+      // roots burst up along the marked line
+      stroke(g, '#62b845', 3, 12);
+      g.beginPath();
+      for (const [x, y] of f.tiles || []) {
+        const X = px(x), Y = py(y);
+        g.moveTo(X + 8, Y + 34); g.lineTo(X + 13, Y + 8); g.lineTo(X + 18, Y + 34);
+        g.moveTo(X + 22, Y + 34); g.lineTo(X + 28, Y + 4); g.lineTo(X + 33, Y + 34);
+      }
+      g.stroke();
+      return;
+    }
     if (f.x == null) return;
     const cx = px(f.x) + 20, cy = py(f.y) + 20;
     if (f.type === 'swing') {
@@ -534,11 +597,21 @@
     if ('letterSpacing' in g) g.letterSpacing = '0px';
     g.fillStyle = C.white;
     g.font = `500 17px ${FONT}`;
-    wrap(g, it.desc, cx, cy + 2, 220, 22);
+    wrapTop(g, it.desc, cx, cy - 6, 220, 22);   // starts under the name, however many lines
     g.fillStyle = C.dim;
     g.font = `600 13px ${FONT}`;
     const tag = it.kind === 'item' ? (it.on ? 'EQUIPPED' : 'PINCH TO EQUIP') : it.kind === 'elixir' ? 'PINCH TO DRINK' : 'PINCH';
-    g.fillText(tag, cx, cy + 74);
+    g.fillText(tag, cx, cy + 96);
+  }
+  function wrapTop(g, text, x, top, maxW, lh) {
+    const words = String(text).split(' ');
+    const lines = []; let line = '';
+    for (const w of words) {
+      const t = line ? line + ' ' + w : w;
+      if (g.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t;
+    }
+    if (line) lines.push(line);
+    lines.forEach((l, i) => g.fillText(l, x, top + i * lh));
   }
   function wrap(g, text, x, y, maxW, lh) {
     const words = String(text).split(' ');

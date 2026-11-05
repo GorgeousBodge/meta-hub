@@ -2,9 +2,15 @@
 
 A cosy turn-based adventure for the glasses. Bodge steps one tile per swipe, and the world takes its turn after each of his actions, so nothing needs quick reflexes or held buttons.
 
-Add it to the glasses as `…/bamberland/` (keep the final slash).
+This is **build chat 3**: the Queen's Wood. What's playable, in story order:
 
-This is the **engine upgrade** (build chat 2). What's playable: the opening cut scene, Bamber village, the Queen's Wood and the Hollow Oak glade (in the gloom), Kev's shop, Brendan's brambles, Telkperson, Millbrook Vale and the whole Sunk Mill, ending with its Sunstone, which brings the vale's colour back.
+1. The opening cut scene, then Bamber village and the Queen's Wood, in the gloom.
+2. Kev's shop, and Brendan's brambles (he wants a Fizzwhistle).
+3. **The Hollow Oak**, through the door in the great oak's trunk: six rooms, the Hopstaff, and **the Thornmother**. Her Sunstone brings the wood's colour back.
+4. Brendan reforges the Thwacker into the **Sunbright Thwacker** (twice as hard), and the brambles on the west road wither.
+5. Millbrook Vale and the whole Sunk Mill, ending with its Sunstone.
+
+On the glasses, add it as `…/bamberland/index.html`. The glasses don't accept an address ending in `/`.
 
 ## Controls
 
@@ -40,7 +46,7 @@ If Bodge runs out of hearts, he wakes at the doorway he last came through, with 
 | `data/music.js` | The tunes, as notes | write or change a tune |
 | `data/cutscenes.js` | The cut scenes, panel by panel | write a cut scene |
 | `world/regions.js` | Regions, map pages, shops, Telkperson's visits | add a region, stock a shop, add a Telkperson visit |
-| `world/wood.js`, `world/mill.js` | The rooms, one file per region | design rooms |
+| `world/wood.js`, `world/oak.js`, `world/mill.js` | The rooms: the wood, the Hollow Oak, the vale and the Sunk Mill | design rooms |
 | `engine/core.js` | Rules, turns, saves, rooms, Bodge's actions | (rarely) |
 | `engine/foes.js` | Bristlehog, Spindlewisp, Mimmet, embers, the boss | add an enemy |
 | `engine/town.js` | Talk that follows the story, the shop, Telkperson, the map | (rarely) |
@@ -74,7 +80,9 @@ pond: {
 },
 ```
 
-`.` grass, `,` flowers, `:` path, `T` tree, `*` bush, `f` fence, `~` water, `%` brambles. People (`N`), signs (`=`), chests (`C`), pots (`P`) and `$` (a pocket of 5 Sunpennies) work as in dungeons.
+`.` grass, `,` flowers, `:` path, `T` tree, `*` bush, `f` fence, `~` water, `%` brambles. People (`N`), signs (`=`), chests (`C`), pots (`P`) and `$` (a pocket of 5 Luftballons) work as in dungeons.
+
+**Doors** lead into buildings or caves. `doors: [{ at: [7, 3], to: 'oakroot', x: 7, y: 10, face: 'up' }]` makes tile 7, 3 a door: stepping onto it takes Bodge to `oakroot`, at 7, 10, facing up. It works even on a building's tile. To come back out, give the room inside an exit to a set spot: `exits: { s: { to: 'glade', x: 7, y: 4, face: 'down' } }`.
 
 **Brambles** (`%`) stay solid until the story flag named in the room's `thorns` is set.
 
@@ -82,7 +90,16 @@ pond: {
 
 ## Design a dungeon room
 
-Same as before; the legend is at the top of `world/mill.js`. Add `page` and `at` so it appears on the map. Chests can now also hold `coins:10` or an elixir (`tonic`). Beating a boss leaves a heart vessel and the region's Sunstone.
+The legend is at the top of `world/mill.js`, plus `%` for **thorns**: they can't be walked through, but can be vaulted with the Hopstaff, like a gap. Add `page` and `at` so a room appears on the map. Chests can also hold `coins:10` or an elixir (`tonic`).
+
+A region's dungeons can have their own wall colour: `tint: '#7fdc5a'` in `world/regions.js`. That gives the Hollow Oak its green.
+
+**Bosses.** Put a 2×2 square of `Z` on the map, `solve: 'boss'`, and name the boss: `boss: 'thorn'` or `boss: 'kiln'`. Their names, intro and defeat lines are under `bosses` in `data/lore.js`. Beating a boss leaves a heart vessel and the region's Sunstone, which brings its colour back and plays the cut scene named by the region's `cut`.
+
+- **The Thornmother** (`thorn`) marks Bodge's row or column, alternately. Next turn, roots burst up along it, for two hearts if he's still there. After two waves (three on her last heart), her heart opens for a few turns. Strike it from inside her ring of thorns, which means vaulting in. Each hit throws Bodge back out. Three hits win.
+- **The Kilnwarden** (`kiln`) marks a cross, slams, vents embers, then cools. Strike its core while it's cool.
+
+**Reforging.** A talk option with `forge: 1` has the Thwacker reforged to level 1: a new name and description from `forged` in `data/lore.js`, and one extra point of damage per level. Bosses still take one hit at a time.
 
 **Exits** work the same in both kinds of room: leave a gap in the edge, name the room next door, line the gaps up on both sides. A `D` or `B` locked doorway goes on one side only; an `S` opens when the room is solved.
 

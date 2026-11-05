@@ -26,7 +26,8 @@
        rays     true: soft light rays around it
      Special layers: { bunting: true, sag: [0, 8] }
    Play one from a room with cut: 'id' (first visit), or from talk with
-   cut: 'id'. 'opening' plays at New game; 'sunstone' when one is found.
+   cut: 'id'. 'opening' plays at New game. Each region's Sunstone scene is
+   named in world/regions.js (cut: 'sunstone_wood').
    ========================================================================== */
 window.BAMBER_CUTS = {
   maps: {
@@ -121,7 +122,44 @@ window.BAMBER_CUTS = {
     ],
   },
 
-  sunstone: {
+  sunstone_wood: {
+    music: 'wood',
+    panels: [
+      {
+        text: "The Sunstone flares. Over the Queen's Wood, the clouds peel back like a lid.",
+        dur: 2.2,
+        ground: { map: 'meadow', tone: ['gloom', 'day'] },
+        layers: [
+          { art: 'cloud', x: [120, -200], y: 20, tone: 'day' },
+          { art: 'cloud', x: [380, 640], y: 50, flip: true, tone: 'day' },
+          { art: 'hero', face: 'down', x: 280, y: 300, tone: 'day' },
+          { art: 'sunstone', x: 282, y: [260, 170], scale: 4, tone: 'day', rays: true },
+        ],
+      },
+      {
+        text: 'In the village, {brendan} and {kev} blink up at a patch of blue sky.',
+        dur: 1.4,
+        ground: { map: 'meadow', tone: 'day' },
+        layers: [
+          { art: 'sun', x: 440, y: 36, alpha: [0, 1] },
+          { art: 'brendan', x: 220, y: 230, hop: 1 },
+          { art: 'kev', x: 330, y: 230, hop: 0, flip: true },
+        ],
+      },
+      {
+        text: 'Somewhere far off, {tori} stamps her foot and slams a door.',
+        dur: 1,
+        ground: { map: 'meadow', tone: 'gloom' },
+        layers: [
+          { art: 'cloud', x: 100, y: 30 },
+          { art: 'cloud', x: 360, y: 60, flip: true },
+          { art: 'tori', x: 268, y: 190, scale: 6, tone: 'day', hop: 1 },
+        ],
+      },
+    ],
+  },
+
+  sunstone_mill: {
     panels: [
       {
         text: 'The Sunstone flares. Up above the vale, a patch of sky turns blue.',

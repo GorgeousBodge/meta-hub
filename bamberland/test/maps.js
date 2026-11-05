@@ -8,7 +8,7 @@ const WORLD = S.BAMBER_WORLD, LORE = S.BAMBER_LORE, ART = S.BAMBER_ART, CUTS = S
 const problems = [];
 const bad = (room, msg) => problems.push(`${room}: ${msg}`);
 const W = 15, H = 12;
-const DUNGEON = '#.~_DBSOPC=NbLKHX$hwmZ';
+const DUNGEON = '#.~_DBS%OPC=NbLKHX$hwmZ';
 const FIELD = '.,:T*f~%NC=PKHX$@hwm';
 const DOORWAY = { field: '.,:', dungeon: '._DBS' };
 const EDGE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
@@ -56,6 +56,7 @@ for (const [id, d] of Object.entries(WORLD.rooms)) {
       if ((o.has || o.take) && !ELIXIRS.includes(o.has || o.take)) bad(id, `talk needs unknown elixir "${o.has || o.take}"`);
       if (o.cut && !CUTS[o.cut]) bad(id, `talk plays unknown cut scene "${o.cut}"`);
       [].concat(o.set || []).forEach((f) => flagsSet.add(f));
+      if (o.forge != null && !(LORE.items.thwacker.forged || [])[o.forge - 1]) bad(id, `forge: ${o.forge} but lore.js has no forged level ${o.forge}`);
       [].concat(o.if || [], o.unless || []).forEach((f) => flagsUsed.push([id, f]));
     }
   }
@@ -64,8 +65,22 @@ for (const [id, d] of Object.entries(WORLD.rooms)) {
   if (d.music && !MUSIC[d.music]) bad(id, `unknown tune "${d.music}"`);
   for (const b of d.buildings || []) if (!ART.BUILDINGS[b.art]) bad(id, `unknown building "${b.art}"`);
   if (!d.at) bad(id, 'no at: [column, row] for the map');
+  // Doors into other rooms
+  for (const dr of d.doors || []) {
+    if (!WORLD.rooms[dr.to]) bad(id, `door goes to unknown room "${dr.to}"`);
+    if (dr.x == null || dr.y == null) bad(id, `door to ${dr.to} needs x and y for where Bodge arrives`);
+  }
+  // Bosses
+  if (d.solve === 'boss' && !all.includes('Z')) bad(id, "solve: 'boss' but no Z on the map");
+  if (all.includes('Z') && !LORE.bosses[d.boss || 'kiln']) bad(id, `unknown boss "${d.boss}" (see bosses in lore.js)`);
   // Exits line up both ways
   for (const [edge, target] of Object.entries(d.exits || {})) {
+    if (target && typeof target === 'object') {
+      // an exit to a set spot: just needs a real room and a gap in the wall
+      if (!WORLD.rooms[target.to]) bad(id, `exit ${edge} goes to unknown room "${target.to}"`);
+      if (!gaps(d, edge).length) bad(id, `exit ${edge} has no gap in the wall`);
+      continue;
+    }
     const t = WORLD.rooms[target];
     if (!t) { bad(id, `exit ${edge} goes to unknown room "${target}"`); continue; }
     if ((t.exits || {})[BACK[edge]] !== id) bad(id, `exit ${edge} to ${target}, but ${target} has no ${BACK[edge]} exit back`);
@@ -97,7 +112,10 @@ for (const ev of WORLD.telk) {
   [].concat(ev.set || []).forEach((f) => flagsSet.add(f));
   [].concat(ev.if || [], ev.unless || []).forEach((f) => flagsUsed.push(['telk ' + ev.id, f]));
 }
-for (const r of Object.values(WORLD.regions)) if (r.sun) flagsSet.add(r.sun);
+for (const r of Object.values(WORLD.regions)) {
+  if (r.sun) flagsSet.add(r.sun);
+  if (r.cut && !CUTS[r.cut]) problems.push(`region ${r.name}: unknown cut scene "${r.cut}"`);
+}
 if (!flagsSet.has('met_kev')) flagsSet.add('met_kev');
 for (const [where, f] of flagsUsed) if (!flagsSet.has(f)) problems.push(`${where}: story flag "${f}" is never set`);
 
@@ -119,7 +137,7 @@ for (const [id, c] of Object.entries(CUTS)) {
     if (p.ground && p.ground.map && !CUTS.maps[p.ground.map]) problems.push(`cut ${id} panel ${i + 1}: no map "${p.ground.map}"`);
   });
 }
-for (const need of ['opening', 'sunstone']) if (!CUTS[need]) problems.push(`cutscenes.js needs a scene called "${need}"`);
+for (const need of ['opening']) if (!CUTS[need]) problems.push(`cutscenes.js needs a scene called "${need}"`);
 
 // People's art
 for (const [id, p] of Object.entries(LORE.people)) {

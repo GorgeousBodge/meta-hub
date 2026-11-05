@@ -179,7 +179,7 @@ BAMBER_WORLD.add('mill', {
 
   shrine: {
     page: 'sunkmill', at: [2, 0],
-    name: 'Hopstaff Shrine',
+    name: 'Spring Shrine',
     exits: { s: 'maze' },
     map: [
       '###############',
@@ -198,7 +198,7 @@ BAMBER_WORLD.add('mill', {
     signs: [
       ['Face a gap with the {item} and pinch: up, over, down.'],
     ],
-    chests: ['hopstaff'],
+    chests: ['coins:20'],
   },
 
   embers: {

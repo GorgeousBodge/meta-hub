@@ -10,7 +10,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const FILES = [
   'data/lore.js', 'data/art.js', 'data/music.js', 'data/cutscenes.js',
-  'world/regions.js', 'world/wood.js', 'world/mill.js',
+  'world/regions.js', 'world/wood.js', 'world/oak.js', 'world/mill.js',
   'engine/core.js', 'engine/foes.js', 'engine/town.js',
 ];
 
