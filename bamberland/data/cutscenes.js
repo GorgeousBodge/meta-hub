@@ -66,7 +66,7 @@ window.BAMBER_CUTS = {
     music: 'wood',
     panels: [
       {
-        text: "The Queen's Wood, on the sunniest day of the year. {queen} is having a lovely time.",
+        text: "The Queen's Wood, on the sunniest day of the year. {queen} and her loyal subjects are having a lovely time.",
         dur: 1.6,
         ground: { map: 'meadow', tone: 'day' },
         layers: [
@@ -81,7 +81,7 @@ window.BAMBER_CUTS = {
         ],
       },
       {
-        text: 'Then the clouds rolled in, and the sun went out like a candle.',
+        text: 'Then clouds filled the sky, and the sun disappeared with all it's warmth and joy.',
         dur: 1.8,
         ground: { map: 'meadow', tone: ['day', 'gloom'] },
         layers: [
@@ -100,7 +100,7 @@ window.BAMBER_CUTS = {
         ],
       },
       {
-        text: '{tori} swooped down and carried the Queen away. Everyone stood dazed. Everyone except {hero}.',
+        text: 'The dark witch {tori}, who hates all things sun and fun, swooped down and carried the Queen away. Everyone stood dazed. Everyone except {hero} for he had not been paying attention.',
         dur: 1.6,
         ground: { map: 'meadow', tone: 'gloom' },
         layers: [
@@ -126,7 +126,7 @@ window.BAMBER_CUTS = {
     music: 'wood',
     panels: [
       {
-        text: "The Sunstone flares. Over the Queen's Wood, the clouds peel back like a lid.",
+        text: "The Sunstone flares. Over the Queen's Wood, the clouds melt away and thick, throbbing shafts of light penetrate the gloom.",
         dur: 2.2,
         ground: { map: 'meadow', tone: ['gloom', 'day'] },
         layers: [
@@ -171,7 +171,7 @@ window.BAMBER_CUTS = {
         ],
       },
       {
-        text: 'Somewhere far off, {tori} stamps her foot and slams a door.',
+        text: 'Somewhere far off, {tori} stamps her foot and cranks up the A/C.',
         dur: 1,
         ground: { map: 'meadow', tone: 'gloom' },
         layers: [
