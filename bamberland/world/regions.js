@@ -40,7 +40,7 @@ window.BAMBER_WORLD = {
   },
 
   shops: {
-    kev: ['tonic', 'brew', 'fizz'],
+    kev: ['tonic', 'brew', 'fizz', 'kebab'],
   },
 
   telk: [
