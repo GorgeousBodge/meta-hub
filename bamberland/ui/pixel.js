@@ -59,8 +59,18 @@
       const rows = ART[group] && ART[group][name];
       if (rows && Array.isArray(rows)) return sprite(rows, ART.PALETTE, mode, flip, group + ':' + name);
     }
-    if (ART.PORTRAITS[name]) return sprite(ART.PORTRAITS[name], ART.PORTRAIT_PALETTE, mode, flip, 'portrait:' + name);
+    if (ART.PORTRAITS[name]) {
+      const pal = (ART.PORTRAIT_PALETTES && ART.PORTRAIT_PALETTES[name]) || ART.PORTRAIT_PALETTE;
+      return sprite(ART.PORTRAITS[name], pal, mode, flip, 'portrait:' + name);
+    }
     return null;
+  }
+
+  // A friend's dialogue portrait (never their world sprite, which may share the name)
+  function portrait(name, mode = 'day') {
+    if (!ART.PORTRAITS[name]) return null;
+    const pal = (ART.PORTRAIT_PALETTES && ART.PORTRAIT_PALETTES[name]) || ART.PORTRAIT_PALETTE;
+    return sprite(ART.PORTRAITS[name], pal, mode, false, 'portrait:' + name);
   }
 
   function bodge(face = 'down', step = 0, mode = 'day', scheme = 0) {
@@ -155,5 +165,5 @@
     g.restore();
   }
 
-  window.BamberPixel = { PX, T, W, H, OY, tone, sprite, blit, art, bodge, prep, ground, rnd, clear: () => cache.clear() };
+  window.BamberPixel = { PX, T, W, H, OY, tone, sprite, blit, art, portrait, bodge, prep, ground, rnd, clear: () => cache.clear() };
 })();

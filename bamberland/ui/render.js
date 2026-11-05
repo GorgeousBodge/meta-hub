@@ -77,7 +77,7 @@
   }
 
   /* ---------- outdoor screens (pixel art) ---------- */
-  const PIX_OBJ = { '=': 'sign', C: 'chest', c: 'chest_open', P: 'pot', $: 'coin', Y: 'coin', H: 'heart', K: 'key' };
+  const PIX_OBJ = { '=': 'sign', C: 'chest', c: 'chest_open', P: 'pot', $: 'balloon', Y: 'balloon', H: 'heart', K: 'key' };
   function drawField(g, game, hurt) {
     const { G, R } = game;
     const md = game.tone();
@@ -629,7 +629,7 @@
     g.fillText(shop.title.toUpperCase(), 40, 48);
     if ('letterSpacing' in g) g.letterSpacing = '0px';
     g.textAlign = 'right';
-    Px.blit(g, Px.art('coin', 'day'), 470, 28, 3);
+    Px.blit(g, Px.art('balloon', 'day'), 470, 28, 3);
     g.fillStyle = C.amber; g.font = `700 20px ${FONT}`;
     g.fillText(String(G.coins), 560, 48);
     shop.items.forEach((it, i) => {
@@ -649,7 +649,7 @@
       g.fillStyle = G.coins >= it.price ? C.amber : 'rgba(255,194,74,0.4)';
       g.font = `700 19px ${FONT}`;
       g.fillText(String(it.price), 520, y + 27);
-      Px.blit(g, Px.art('coin', 'day'), 524, y + 12, 3);
+      Px.blit(g, Px.art('balloon', 'day'), 524, y + 12, 3);
     });
     const it = shop.items[shop.i];
     if (it) {

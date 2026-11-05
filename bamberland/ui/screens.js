@@ -98,7 +98,7 @@
   const ICONS = {
     key: '<svg viewBox="0 0 24 24" class="ico"><circle cx="7.5" cy="12" r="3.5"/><path d="M11 12h10M17 12v3M20 12v2"/></svg>',
     bigkey: '<svg viewBox="0 0 24 24" class="ico"><circle cx="7" cy="12" r="4.5"/><circle cx="7" cy="12" r="1.5"/><path d="M11.5 12H22M16 12v4M19 12v4M22 12v3"/></svg>',
-    coin: '<svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v8M9.5 10.5h5"/></svg>',
+    coin: '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5a6 6 0 0 1 6 6c0 4.2-3.4 7.5-6 7.5s-6-3.3-6-7.5a6 6 0 0 1 6-6Z"/><path d="M11 16h2l-1 1.6ZM12 17.6c-1.5 1.6 1.5 2.4 0 4"/></svg>',
     thwacker: '<svg viewBox="0 0 24 24" class="ico"><rect x="11" y="3" width="10" height="7" rx="1.5" transform="rotate(35 16 6.5)"/><path d="M12.5 10.5 4 20"/><circle cx="16.3" cy="6.6" r="1.2"/></svg>',
     hopstaff: '<svg viewBox="0 0 24 24" class="ico"><path d="M6 21 18 3"/><path d="M15.5 6.5c1.8.4 2.8 1.6 2.5 3.4M8.5 17.5c-1.8-.4-2.8-1.6-2.5-3.4"/></svg>',
   };
@@ -149,7 +149,7 @@
   function portraitFor(speaker) {
     const p = speaker && LORE.people[speaker];
     if (!p) return null;
-    if (p.portrait && ART.PORTRAITS[p.portrait]) return { img: Px.art(p.portrait), scale: 3, x: 0, y: 0 };
+    if (p.portrait && ART.PORTRAITS[p.portrait]) return { img: Px.portrait(p.portrait), scale: 3, x: 0, y: 0 };
     if (p.sprite) return { img: Px.art(p.sprite), scale: 8, x: 8, y: 0 };   // 10×12 sprite, shown large
     return null;
   }

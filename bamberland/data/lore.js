@@ -16,8 +16,8 @@ window.BAMBER_LORE = {
     blurb: 'A quiet Bamberland local with a big cap and a bigger mallet.',
   },
 
-  // The money. "one" is used for 1, "many" for everything else.
-  money: { one: 'Sunpenny', many: 'Sunpennies' },
+  // The money: red balloons, for Kev. "one" is used for 1, "many" for everything else.
+  money: { one: 'Luftballon', many: 'Luftballons' },
 
   // Title screen: two or three short lines
   intro: [
@@ -37,12 +37,12 @@ window.BAMBER_LORE = {
                 without one, the sprite is shown large instead
      nameable:  true = the player can rename them at New game          */
   people: {
-    queen: { name: 'Queen Alison', sprite: 'queen', nameable: true },
-    tori: { name: 'Tori', sprite: 'tori', nameable: true },
-    brendan: { name: 'Brendan', sprite: 'brendan', nameable: true },
-    kev: { name: 'Kev', sprite: 'kev', nameable: true },
+    queen: { name: 'Queen Alison', sprite: 'queen', portrait: 'queen', nameable: true },
+    tori: { name: 'Tori', sprite: 'tori', portrait: 'tori', nameable: true },
+    brendan: { name: 'Brendan', sprite: 'brendan', portrait: 'brendan', nameable: true },
+    kev: { name: 'Kev', sprite: 'kev', portrait: 'kev', nameable: true },
     lauri: { name: 'Lauri', sprite: 'lauri', portrait: 'lauri', nameable: true },
-    telk: { name: 'Telkperson', sprite: 'telk', nameable: true },
+    telk: { name: 'Telkperson', sprite: 'telk', portrait: 'telk', nameable: true },
     nettle: { name: 'Nettle' },
     folk: { name: 'Villager', sprite: 'folk' },
   },

@@ -1,109 +1,140 @@
-[README.md](https://github.com/user-attachments/files/34385128/README.1.md)
 # Bamberland
 
-A small turn-based adventure for the glasses. Bodge steps one tile per swipe, and the world takes its turn after each of his actions, so nothing needs quick reflexes or held buttons.
+A cosy turn-based adventure for the glasses. Bodge steps one tile per swipe, and the world takes its turn after each of his actions, so nothing needs quick reflexes or held buttons.
 
-Add it to the glasses as `…/bamberland/index.html`.
+Add it to the glasses as `…/bamberland/` (keep the final slash).
+
+This is the **engine upgrade** (build chat 2). What's playable: the opening cut scene, Bamber village, the Queen's Wood and the Hollow Oak glade (in the gloom), Kev's shop, Brendan's brambles, Telkperson, Millbrook Vale and the whole Sunk Mill, ending with its Sunstone, which brings the vale's colour back.
 
 ## Controls
 
-| Input | In play | In the item ring | In dialogue |
-|---|---|---|---|
-| Swipe (arrow keys) | Step one tile and face that way. Into a wall or object: just turn | Choose a slot | — |
-| Pinch (Enter) | Act on the tile Bodge faces | Equip, or do the action | Next page |
-| Back (Escape) | Open the item ring | Close the ring | Close |
+| Input | In play | Item ring | Shop | Map | Dialogue and cut scenes |
+|---|---|---|---|---|---|
+| Swipe (arrow keys) | Step one tile and face that way. Into a wall or object: just turn | Choose a slot | Choose an elixir | Change page | — |
+| Pinch (Enter) | Act on the tile Bodge faces | Equip, drink or do the action | Buy | Close | Next page |
+| Back (Escape) | Open the item ring | Close | Leave | Close | Close / skip |
 
-What a pinch does depends on what Bodge faces. The hint bar always shows it:
+What a pinch does depends on what Bodge faces. The hint bar always shows it: **talk**, **read**, **open**, **lift** and **throw**, **push**, **light**, **unlock**, or use the equipped item (the **Thwacker** strikes; the **Hopstaff** vaults two tiles).
 
-- **Talk** to a person, **read** a sign, **open** a chest
-- **Lift** a pot, then pinch again to **throw** it (up to 4 tiles)
-- **Push** a block one tile
-- **Light** a brazier, **unlock** a door (if you hold the key)
-- Otherwise, use the equipped item:
-  - The **Thwacker** strikes and knocks a foe back one tile. Swinging at nothing still passes a turn, so it doubles as "wait".
-  - The **Hopstaff** vaults two tiles, over a gap, a pot, a block or a foe.
+The item ring holds the Thwacker and Hopstaff, any elixirs Bodge carries (drinking one takes no turn), the **Map**, **Reset room**, **Music**, **Sound** and **Save & quit**.
 
-The item ring also has **Reset room** (puts the room back as it was when you came in), **Sound** and **Save & quit**.
+## Starting a game
 
-Back on the title screen returns to the hub.
+- **Title:** Continue (the slot you played last), Save slots, Music, Sound.
+- **Save slots:** three, so friends can share a pair of glasses. Pinch an empty slot for a new game, a full one to carry on. **Erase a slot** asks twice.
+- **Naming:** before a new game, anyone can be renamed: Bodge, Queen Alison, Tori, Brendan, Kev, Lauri and Telkperson. Pinch a name and a text box opens; the glasses bring up their own handwriting or dictation. Enter keeps the new name, Back keeps the old one. The defaults are the friends' real names.
+- **The Mill prototype's save** (`bamberland.save`) can't be used by this version. The slot screen says so, and it's cleared when you start a new game.
 
-**How Back works on the glasses.** The Back gesture isn't sent to the page as a key. The glasses step back through the page's history, and with nothing left, they leave the app. So once you start playing, the game adds one spare history entry. Back uses it up, the game handles it (ring, dialogue), and then adds a new one. On a computer, Escape does the same job. On the title screen there's no spare entry, so Back leaves as usual. The game saves itself every time you change room, after every chest and key, and when a room is solved. The save is stored as `bamberland.save`, and the sound setting as `bamberland.sound`.
+The game saves itself on every room change, after chests, keys, shopping and talk that changes the story, and when a room is solved. Saves live in `bamberland.slot1` to `bamberland.slot3`; settings in `bamberland.music` and `bamberland.sound`. Each save has a version number. A newer game that changes the format upgrades old saves in `migrate()` in `engine/core.js`, or says clearly that it can't.
 
 If Bodge runs out of hearts, he wakes at the doorway he last came through, with full hearts. Nothing he found is lost.
 
+**How Back works on the glasses.** The Back gesture isn't sent to the page as a key. The glasses step back through the page's history, and with nothing left, they leave the app. So off the title screen, the game keeps one spare history entry: Back uses it up, the game handles it, then adds a new one. On a computer, Escape does the same. On the title screen, Back returns to the hub.
+
 ## Files
 
-| File | What it holds |
-|---|---|
-| `rooms.js` | Every room as a text map, plus its exits, signs, dialogue and chest contents |
-| `lore.js` | Names, item descriptions, title, opening, boss and ending text |
-| `game.js` | The engine (rules and turns) and the screens. No content |
-| `render.js` | All drawing |
-| `bamberland.css` | HUD, title, dialogue and overlay styles |
-| `icon.svg`, `.well-known/meta-wearables-manifest.json` | The glasses icon |
+| Folder / file | What it holds | Edit it to… |
+|---|---|---|
+| `data/lore.js` | Names, items, Kev's elixirs and prices, the money's name, pickups, boss lines, short messages | rename things, write lines, change prices |
+| `data/art.js` | Every picture as a text grid, one letter per pixel, plus the palette | draw sprites, tiles, buildings, portraits |
+| `data/music.js` | The tunes, as notes | write or change a tune |
+| `data/cutscenes.js` | The cut scenes, panel by panel | write a cut scene |
+| `world/regions.js` | Regions, map pages, shops, Telkperson's visits | add a region, stock a shop, add a Telkperson visit |
+| `world/wood.js`, `world/mill.js` | The rooms, one file per region | design rooms |
+| `engine/core.js` | Rules, turns, saves, rooms, Bodge's actions | (rarely) |
+| `engine/foes.js` | Bristlehog, Spindlewisp, Mimmet, embers, the boss | add an enemy |
+| `engine/town.js` | Talk that follows the story, the shop, Telkperson, the map | (rarely) |
+| `ui/pixel.js` | Pixel drawing: tones, ground, sprites | |
+| `ui/render.js` | The room, ring, shop and map pictures | add a ring icon |
+| `ui/audio.js` | Sound effects and the music player | add a sound effect |
+| `ui/cutscene.js` | The cut-scene player | |
+| `ui/screens.js` | Title, slots, naming, play, ring, shop, map, dialogue, Back | |
+| `bamberland.css` | HUD, title, slots, naming, dialogue | |
+| `.well-known/` | The glasses icon (`bamberland-icon.svg`) and its manifest | |
+| `looktest/` | The chat 1 look test, unchanged | |
+| `test/` | Checks you can run on a computer (optional, not needed on the site) | |
 
-## Design a room
+## Design an outdoor screen
 
-Open `rooms.js`. The legend is at the top. A room is 15 characters wide and 12 rows tall:
+Outdoor screens have `kind: 'field'` and their own ground letters. The legend is at the top of `world/wood.js`:
 
 ```js
-myroom: {
-  name: 'Root Cellar',               // shown when you walk in
-  exits: { s: 'hall', e: 'cellar2' },
-  solve: 'plates',                   // optional: 'plates' | 'braziers' | 'enemies' | 'boss'
+pond: {
+  name: 'Duck Pond',
+  kind: 'field',
+  at: [1, 1],                       // its square on the map
+  exits: { w: 'village' },
   map: [
-    '#######S#######',
-    '#.............#',
-    '#..O......_...#',
-    // …12 rows in all
-    '#######.#######',
+    'TTTTTTTTTTTTTTT',
+    ':::::::::.....T',              // a path out of the west edge
+    // …12 rows of 15
   ],
-  signs: ['Push the block onto the plate.'],
-  chests: ['key'],
+  buildings: [{ art: 'cottage', x: 9, y: 2 }],   // 2×2 tiles, solid
+  signs: ['Do not feed the ducks.'],
 },
 ```
 
-**Exits.** Leave a gap in the outer wall where you want a doorway. Bodge comes out on the matching edge of the next room, in the same column (for north and south exits) or the same row (for east and west exits), so put the gaps in the same place on both sides. The other room needs an exit back.
+`.` grass, `,` flowers, `:` path, `T` tree, `*` bush, `f` fence, `~` water, `%` brambles. People (`N`), signs (`=`), chests (`C`), pots (`P`) and `$` (a pocket of 5 Sunpennies) work as in dungeons.
 
-- A `D` or `B` in the gap makes it a locked doorway. Put it on one side only.
-- An `S` anywhere in the room opens when the room's `solve` condition is met, and stays open for good.
+**Brambles** (`%`) stay solid until the story flag named in the room's `thorns` is set.
 
-**Signs, people and chests** take their text or contents from the room's `signs`, `talk` and `chests` lists. They are matched to the map in reading order: left to right, then top to bottom.
+**Tone.** Until a region's Sunstone comes back, its outdoor screens are drawn in the gloom (sparse floor, cool and dim). Afterwards they're restored (filled floor, full colour), as chosen in the look test.
 
-- Chests can hold: `key`, `bigkey`, `hopstaff`, `heart` or `container` (a heart vessel).
-- Talk entries name a person from `lore.js`: `{ who: 'nettle', lines: ['…', '…'] }`.
+## Design a dungeon room
 
-**Text** can use `{hero}`, `{weapon}`, `{item}`, `{boss}`, `{dungeon}`, `{world}`, or any enemy or person id. The current name is swapped in, so renaming in `lore.js` updates every room.
+Same as before; the legend is at the top of `world/mill.js`. Add `page` and `at` so it appears on the map. Chests can now also hold `coins:10` or an elixir (`tonic`). Beating a boss leaves a heart vessel and the region's Sunstone.
 
-**Braziers** stay lit for `burn` turns (default 10). For a `braziers` room, all of them must be burning at once.
+**Exits** work the same in both kinds of room: leave a gap in the edge, name the room next door, line the gaps up on both sides. A `D` or `B` locked doorway goes on one side only; an `S` opens when the room is solved.
 
-**Keys:** each small key is used up by one `D`. Make sure a player can't spend a key on a door that strands them: either give one key per door in order, or keep later doors behind the item.
+## People, the story and the shop
 
-To try your changes, commit, wait for Vercel, and open the game. Start a New game, or use Reset room to reload a room you're standing in.
+Talk can change with the story. Each person can have several options, and the first one that applies is used:
 
-### Check a room before you commit (optional)
+```js
+{ who: 'brendan', face: 'right', say: [
+  { if: 'brambles', lines: ['Brambles are down.'] },
+  { has: 'fizz', take: 'fizz', set: 'brambles', lines: ['A Fizzwhistle! …'] },
+  { lines: ['Fetch me a Fizzwhistle from {kev}.'] },
+] },
+```
 
-The `test/` scripts that came with this build play the whole dungeon automatically. You can run them on a computer with Node (`node test/maps.js`, then `node test/solve.js`). The site doesn't need them, so you don't have to upload them to the repo.
+- `if` / `unless`: story flags. `has` / `take`: an elixir in Bodge's bag.
+- `set`: turns a story flag on. `give`: `'coins:5'`, `'tonic'`, `'key'`, `'heart'`, `'container'`, or an item.
+- `shop: 'kev'` opens that shop after the lines. `cut: 'id'` plays a cut scene.
+
+People are listed in `data/lore.js` with a `sprite` (drawn in the world) and optionally a `portrait` (shown in dialogue). Without a portrait, dialogue shows their sprite large. Only Lauri has a portrait so far; send a photo for each friend and they get one too.
+
+**Shops** are in `world/regions.js`: `shops: { kev: ['tonic', 'brew', 'fizz'] }`. Prices and effects are in `data/lore.js` under `elixirs`. Bodge carries at most 3 of each.
+
+**Telkperson** pops up when Bodge walks into a room, once per visit, if its conditions apply. Each visit can leave a hint for the map, give something and set a flag. They're listed in `world/regions.js`.
+
+## Music and cut scenes
+
+Each tune in `data/music.js` is a melody, one chord per bar, a speed and a time signature. Rooms choose one with `music: 'town'`; outdoor screens default to their region's tune and dungeons to `dungeon`. Music and sound effects have separate switches (title screen and item ring), and both start off. Music stops while the glasses' screen is off.
+
+Cut scenes in `data/cutscenes.js` are panels with a line of text, a ground (a little map, in day or gloom, or fading between them) and layers of pictures that can glide, swoop, hop, fade, look dazed or glow. `opening` plays at New game and `sunstone` whenever a Sunstone is found; a room plays one on its first visit with `cut: 'id'`. Pinch moves on, Back skips. A panel moves for its `dur` seconds, then holds still to save battery.
+
+## Check the game before you commit (optional)
+
+The `test/` scripts run on a computer with Node, from the `bamberland` folder:
+
+- `node test/maps.js` checks every room: sizes, letters, exits lining up both ways, signs and chests matching their lists, story flags that are used but never set, unknown names, tunes adding up, cut scenes pointing at real art.
+- `node test/play.js` plays the whole demo from New game to the Sunstone, with path-finding and simple fight tactics, and checks shopping, Telkperson, the map and save and load on the way.
+
+The site doesn't need them, so you don't have to upload them.
 
 ## Add an enemy
 
-1. **`lore.js`:** add a name under `enemies`, e.g. `mole: { name: 'Burrowmole', tip: '…' }`.
-2. **`game.js`:**
-   - Add its map letter to `ENEMY_CHARS`, e.g. `r: 'mole'`.
-   - Add its health to `ENEMY_HP`.
-   - Write a `moleTurn(e, ctx)` next to `hogTurn`. It runs once per world turn. `ctx.moved` is the direction Bodge stepped, or `undefined` if he didn't move.
-   - Call `moleTurn` in `world()`.
-   - Use `hurt(n)` to damage Bodge (in half-hearts), and `enemyCanStand(x, y, e)` before moving the enemy.
-3. **`render.js`:** add a branch to `drawEnemy` for `e.type === 'mole'`.
-4. Add the letter to the legend at the top of `rooms.js`.
+1. **`data/lore.js`:** a name under `enemies`, e.g. `mole: { name: 'Burrowmole', tip: '…' }`.
+2. **`engine/core.js`:** its map letter in `ENEMY_CHARS` (e.g. `r: 'mole'`) and its health in `ENEMY_HP`.
+3. **`engine/foes.js`:** write `X.turn.mole = (e, ctx) => { … }`. It runs once per world turn; `ctx.moved` is the direction Bodge stepped. Use `X.hurt(n)` (in half-hearts) and check `X.enemyCanStand(x, y, e)` before moving.
+4. **`ui/render.js`:** a branch in `drawEnemy` for `e.type === 'mole'`.
+5. Add the letter to the legend at the top of the region file.
 
 ## Add an item
 
-1. **`lore.js`:** add it under `items`, with `name`, `desc` and `found` text. The id is its key, e.g. `lantern`.
-2. **`rooms.js`:** put it in a chest: `chests: ['lantern']`. Opening that chest gives it to Bodge.
-3. **`game.js`:**
-   - In `openRing()`, add the id to the list `['thwacker', 'hopstaff']` so it appears in the ring.
-   - In `pinch()`, before `return swing();`, add `if (G.equip === 'lantern') return useLantern();`, and write that function.
-   - It should call `world({})` if using it takes a turn.
-4. **`render.js`:** draw its ring icon in `drawRingIcon`.
-5. **`game.js`:** add its HUD icon to `ICONS`.
+1. **`data/lore.js`:** under `items`, with `name`, `desc` and `found`.
+2. **A region file:** put it in a chest: `chests: ['lantern']`.
+3. **`ui/screens.js`:** in `openRing()`, add the id to `['thwacker', 'hopstaff']`.
+4. **`engine/core.js`:** in `pinch()`, before `return swing();`, add `if (G.equip === 'lantern') return useLantern();` and write it (call `world({})` if it takes a turn).
+5. **`ui/render.js`:** its ring icon in `drawRingIcon`; **`ui/screens.js`:** its HUD icon in `ICONS`.

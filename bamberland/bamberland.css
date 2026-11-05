@@ -3,20 +3,23 @@
 /* The HUD shows the clock only; no live/offline light in a static game */
 #hudDot, #hudStatus { display: none; }
 
-/* --- HUD stats: hearts, small keys, big key, equipped item ------------- */
+/* --- HUD stats: hearts, keys, big key, money, equipped item ------------ */
 .bl-stats { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.bl-stats[hidden], .bl-equip[hidden], .hud-title[hidden] { display: none; }
+.bl-stats[hidden], .bl-equip[hidden], .hud-title[hidden], .bl-keys[hidden], .bl-bigkey[hidden] { display: none; }
 .bl-hearts { display: flex; gap: 1px; }
 .bl-heart { width: 24px; height: 24px; }
 .bl-heart-o { fill: none; stroke: var(--warn); stroke-width: 2; filter: drop-shadow(0 0 3px rgba(255, 92, 122, .6)); }
 .bl-heart.empty .bl-heart-o { stroke: rgba(255, 92, 122, .4); filter: none; }
 .bl-heart-f { fill: var(--warn); }
-.bl-keys, .bl-bigkey, .bl-equip {
+.bl-keys, .bl-bigkey, .bl-coins, .bl-equip {
   display: flex; align-items: center; gap: 4px;
   font-family: var(--font-display); font-weight: 700; font-size: 18px;
   color: var(--amber);
 }
-.bl-keys .ico, .bl-bigkey .ico { width: 24px; height: 24px; }
+.bl-keys .ico, .bl-bigkey .ico, .bl-coins .ico { width: 24px; height: 24px; }
+.bl-coins { color: #ff6a6a; }
+/* Bubble Brew: a pale ring round the hearts */
+.bl-hearts.is-shielded { border-radius: 14px; box-shadow: 0 0 0 2px rgba(164, 224, 255, .7), 0 0 10px rgba(164, 224, 255, .5); padding: 0 3px; }
 .bl-bigkey { color: rgba(255, 194, 74, .28); }
 .bl-bigkey.is-on { color: var(--amber); filter: drop-shadow(0 0 4px rgba(255, 194, 74, .7)); }
 .bl-equip {
@@ -49,9 +52,45 @@
 .bl-menu .key { height: 66px; flex-direction: row; }
 .bl-menu .key .key-label { font-size: 16px; }
 .bl-menu .key .ico { font-size: 26px; }
-.bl-menu .bl-sound { grid-column: 1 / -1; height: 52px; color: var(--dim); }
-.bl-menu .bl-sound.key-speak { color: var(--amber); }
+.bl-menu .bl-toggle { height: 52px; color: var(--dim); }
+.bl-menu .bl-toggle.key-speak { color: var(--amber); }
 .bl-menu .key:disabled { opacity: .3; }
+
+/* --- Save slots -------------------------------------------------------- */
+.bl-slots, .bl-naming {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 20px var(--pad) var(--pad);
+}
+.bl-slots[hidden], .bl-naming[hidden], .bl-title[hidden] { display: none; }
+.bl-slot {
+  width: 100%; max-width: 500px; height: 84px;
+  flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px;
+  padding: 0 20px; text-align: left;
+}
+.bl-slot-title { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: .06em; }
+.bl-slot-detail { font-size: 15px; color: var(--dim); }
+.bl-slot.is-warn { border-color: var(--warn); }
+.bl-slot.is-warn .bl-slot-detail { color: var(--warn); }
+.bl-erase { width: 100%; max-width: 500px; height: 48px; color: var(--dim); }
+.bl-erase .key-label { font-size: 15px; }
+.bl-note { max-width: 480px; margin: 0; text-align: center; font-size: 16px; line-height: 1.4; color: var(--dim); }
+
+/* --- Naming ------------------------------------------------------------ */
+.bl-name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 500px; }
+.bl-name { height: 58px; flex-direction: column; justify-content: center; gap: 2px; }
+.bl-name .key-label { font-size: 17px; }
+.bl-name-role { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+.bl-name-role:empty { display: none; }
+.bl-begin { width: 100%; max-width: 500px; height: 58px; flex-direction: row; gap: 8px; margin-top: auto; }
+.bl-name-edit {
+  position: absolute; inset: 0; z-index: 7;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  background: rgba(0, 0, 0, .94); padding: var(--pad);
+}
+.bl-name-edit[hidden] { display: none; }
+.bl-name-for { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+.bl-name-field { width: 100%; max-width: 420px; height: 64px; }
+.bl-name-input { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 26px; }
 
 /* --- Dialogue ---------------------------------------------------------- */
 .bl-dialog {
@@ -81,6 +120,12 @@
   letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
 }
 .bl-overlay .bl-dialog-more { position: static; margin-top: 8px; }
+/* A portrait on the left */
+.bl-dialog.has-face { padding-left: 128px; min-height: 124px; }
+.bl-face { position: absolute; left: 16px; top: 14px; width: 96px; height: 96px; }
+.bl-face[hidden] { display: none; }
+/* Pixel art stays crisp */
+.bl-board, .bl-face, .bl-title-art { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 /* --- Out cold / ending ------------------------------------------------- */
 .bl-overlay { position: absolute; inset: 0; display: flex; background: rgba(0, 0, 0, .86); z-index: 6; }

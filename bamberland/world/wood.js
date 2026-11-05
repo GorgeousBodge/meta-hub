@@ -54,10 +54,11 @@ BAMBER_WORLD.add('wood', {
     talk: [
       { who: 'kev', face: 'down', say: [
         { unless: 'met_kev', set: 'met_kev', shop: 'kev', lines: [
-          'Welcome to the finest potion shop under a balloon.',
+          'Welcome to the finest potion shop under a balloon. Three balloons. The aim is ninety-nine.',
+          "I take payment in {coins}. Red ones. Don't ask, it's a whole thing.",
           "Fizzwhistle? Does nothing at all. Best seller. Can't keep it on the shelf.",
         ] },
-        { shop: 'kev', lines: ['Back again, {hero}? Lovely. What can I get you?'] },
+        { shop: 'kev', lines: ['Back again, {hero}? Lovely. Every balloon you spend goes on the roof.'] },
       ] },
       { who: 'brendan', face: 'right', say: [
         { if: 'brambles', lines: ['Brambles are down. Mind the splinters.', 'Bring me some timber one day and I\'ll build you a bridge.'] },
