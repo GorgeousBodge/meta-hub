@@ -28,7 +28,8 @@
   const ENEMY_HP = { hog: 2, wisp: 1, mimmet: 2 };
   const BOSS_HP = 3;
   const START_HEARTS = 6;               // in halves: 6 = three hearts
-  const DROP_EVERY = 2;                 // every 2nd pot or foe drops something
+  const DROP_EVERY = 3;                 // every 3rd pot or foe drops something
+  const DROP_HEART_BELOW = 2;           // ...a heart only if Bodge is missing at least this much (halves); else a Luftballon
   const POCKET = 5;                     // {coins} in a $ on the map
   const SAVE_VERSION = 2;
 
@@ -91,7 +92,12 @@
     }
     const fmt = (s, extra) => {
       const w = extra ? { ...words(), ...extra } : words();
-      return String(s == null ? '' : s).replace(/\{(\w+)\}/g, (m, n) => (n in w ? w[n] : m));
+      // {boss} → "the Thornmother"; {Boss} → "The Thornmother", for the start of a sentence
+      return String(s == null ? '' : s).replace(/\{(\w+)\}/g, (m, n) => {
+        if (n in w) return w[n];
+        const low = n.charAt(0).toLowerCase() + n.slice(1);
+        return low !== n && low in w ? cap(String(w[low])) : m;
+      });
     };
     // The boss of the current room (or the Kilnwarden, outside one)
     function bossLore(type) {
@@ -360,11 +366,11 @@
       }
     }
     function heal(n) { G.hearts = Math.min(G.maxHearts, G.hearts + n); }
-    // Every DROP_EVERY-th pot or foe leaves a heart (or a coin, if hearts are full)
+    // Every DROP_EVERY-th pot or foe leaves a heart if Bodge is hurt, otherwise a Luftballon
     function maybeDrop(x, y) {
       G.drops += 1;
       if (G.drops % DROP_EVERY !== 0) return;
-      if (floorish(x, y) && !objAt(x, y) && !isHero(x, y)) R.obj[key(x, y)] = G.hearts < G.maxHearts ? 'H' : 'Y';
+      if (floorish(x, y) && !objAt(x, y) && !isHero(x, y)) R.obj[key(x, y)] = G.maxHearts - G.hearts >= DROP_HEART_BELOW ? 'H' : 'Y';
     }
     Object.assign(X, { hurt, heal, maybeDrop });
 
@@ -423,7 +429,7 @@
 
     function stepOn() {
       const em = emberAt(G.px, G.py);
-      if (em) { R.embers.splice(R.embers.indexOf(em), 1); hurt(1); }
+      if (em) { R.embers.splice(R.embers.indexOf(em), 1); hurt(X.DAMAGE.ember); }
       const k = key(G.px, G.py), o = R.obj[k];
       if (!o) return;
       const P = LORE.pickups;
@@ -438,7 +444,7 @@
         if (o === '$') { F().taken[k] = 1; save(); }
         on.sound('coin'); on.toast(`+${n} ${n === 1 ? LORE.money.one : LORE.money.many}`);
       } else if (o === 'X') {
-        delete R.obj[k]; F().taken[k] = 1; G.maxHearts += 2; G.hearts = G.maxHearts;
+        delete R.obj[k]; F().taken[k] = 1; G.maxHearts += 2; G.hearts = Math.min(G.maxHearts, G.hearts + 2);
         on.sound('fanfare'); on.dialog(pages(P.container.found)); save();
       } else if (o === 'Q') {
         delete R.obj[k]; F().taken[k] = 1;
@@ -505,7 +511,7 @@
       } else if (kind === 'key') { G.keys += 1; text = P.key.found; }
       else if (kind === 'bigkey') { G.bigKey = true; text = P.bigkey.found; }
       else if (kind === 'heart') { G.hearts = G.maxHearts; text = P.heart.found; }
-      else if (kind === 'container') { G.maxHearts += 2; G.hearts = G.maxHearts; text = P.container.found; }
+      else if (kind === 'container') { G.maxHearts += 2; G.hearts = Math.min(G.maxHearts, G.hearts + 2); text = P.container.found; }
       else if (kind === 'sunstone') {
         const region = WORLD.regions[def().region] || {};
         if (region.sun) G.story[region.sun] = 1;

@@ -144,6 +144,22 @@ The `test/` scripts run on a computer with Node, from the `bamberland` folder:
 
 The site doesn't need them, so you don't have to upload them.
 
+## Tune the difficulty
+
+Everything that sets how hard the game is lives in a few numbers:
+
+| What | Where | Now |
+|---|---|---|
+| How hard each foe hits, in half-hearts | `DAMAGE` at the top of `engine/foes.js` | hog charge 3, Mimmet 2, ember 1, boss attacks 3 |
+| How often pots and foes drop something | `DROP_EVERY` at the top of `engine/core.js` | every 3rd |
+| When a drop is a heart rather than a Luftballon | `DROP_HEART_BELOW` (same place) | when Bodge is missing a whole heart or more |
+| Foes' health | `ENEMY_HP` in `engine/core.js` | hog 2, wisp 1, Mimmet 2 |
+| Starting hearts | `START_HEARTS` in `engine/core.js` | 6 (three hearts) |
+| Prices | `elixirs` in `data/lore.js` | |
+| Where foes and Luftballons are | the room maps (`h`, `w`, `m`, `$`) | |
+
+A heart vessel adds one heart, already filled, but doesn't refill the others. A Sunstone refills them all. Foes outside dungeons come back each time Bodge walks into a screen; there are none in villages.
+
 ## Add an enemy
 
 1. **`data/lore.js`:** a name under `enemies`, e.g. `mole: { name: 'Burrowmole', tip: '…' }`.

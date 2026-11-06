@@ -38,13 +38,13 @@ BAMBER_WORLD.add('mill', {
       'TTTTTTT:TTTTTTT',
       'T~~..,.:....,.T',
       'T~~~...:..*...T',
-      'TT~~~..:......T',
+      'TT~~~..:...w..T',
       'T..~~~.:..=...T',
       'T...~~~:......T',
       'T....~~::::::::',
       'T,....~~......T',
       'T......~~..P..T',
-      'T..*....~~....T',
+      'T..*.h..~~....T',
       'T.,..$...~~...T',
       'TTTTTTTTT~~TTTT',
     ],
@@ -73,7 +73,7 @@ BAMBER_WORLD.add('mill', {
       '#######.#######',
     ],
     signs: [
-      ['{dungeon}. Keep out.', 'Below that, in chalk: "Swipe to step. Pinch to act. Back for your things."'],
+      ['{Dungeon}. Keep out.', 'Below that, in chalk: "Swipe to step. Pinch to act. Back for your things."'],
     ],
     talk: [
       { who: 'nettle', lines: [
@@ -96,7 +96,7 @@ BAMBER_WORLD.add('mill', {
       '#..L.......L..#',
       '..............D',
       '#.............#',
-      '#..L.......L..#',
+      '#..L...w...L..#',
       '#.............#',
       '#.............#',
       '#P...##.##...P#',
@@ -209,7 +209,7 @@ BAMBER_WORLD.add('mill', {
     burn: 12,
     map: [
       '#######S#######',
-      '#............$#',
+      '#.............#',
       '#.............#',
       '#...b.....b...#',
       '#.............#',

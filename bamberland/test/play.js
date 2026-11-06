@@ -84,13 +84,23 @@ function step(d) {
   if (G().face !== dir) act(dir);   // the gap blocks, so this only turns
   act('pinch');
 }
+// Can the next step of a plan still be taken?
+function stepOpen(d) {
+  const v = d.startsWith('V:'), [dx, dy] = DIRS[v ? d.slice(2) : d], n = v ? 2 : 1;
+  const x = G().px + dx * n, y = G().py + dy * n;
+  return g.query.heroCanStand(x, y) && !R().embers.some((e) => e.x === x && e.y === y);
+}
+// Walk to (tx, ty), keeping to the plan unless the next step is blocked,
+// so drifting foes don't make Bodge dither back and forth
 function goTo(tx, ty, tries = 300) {
   const room = R().id;
+  let plan = [];
   for (let i = 0; i < tries; i++) {
     if (G().px === tx && G().py === ty) return true;
     if (R().id !== room) return false;
-    const p = path(tx, ty);
-    if (p && p.length) step(p[0]); else wait();
+    if (!plan.length || !stepOpen(plan[0])) plan = path(tx, ty) || [];
+    if (plan.length) { const before = k(G().px, G().py); step(plan.shift()); if (k(G().px, G().py) === before) plan = []; }
+    else wait();
   }
   fail(`couldn't reach ${tx},${ty}`);
 }

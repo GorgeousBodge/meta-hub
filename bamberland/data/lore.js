@@ -3,8 +3,10 @@
    Rename anything here without touching the game code.
 
    In any text you can write {hero}, {world}, {dungeon}, {weapon}, {item},
-   {boss}, {coin}, {coins}, an enemy id ({hog}) or a person's id ({kev}):
-   the game swaps in the current name, including names the player chose.
+   {boss}, {region}, {coin}, {coins}, an enemy id ({hog}) or a person's id
+   ({kev}): the game swaps in the current name, including names the player
+   chose. A capital letter capitalises the name, for the start of a
+   sentence: {boss} is "the Thornmother", {Boss} is "The Thornmother".
    Keep lines short: about 90 characters per dialogue page fits best.
    ========================================================================== */
 window.BAMBER_LORE = {
@@ -125,10 +127,10 @@ window.BAMBER_LORE = {
       closed: 'Thorny! Wait for her heart to open',
       intro: [
         'Brambles writhe at the heart of the oak. In the middle, something beats.',
-        'The {boss} rises. Step out of the marked line before the roots come up, then strike when her heart opens.',
+        '{Boss} rises. Step out of the marked line before the roots come up, then strike when her heart opens.',
       ],
       defeat: [
-        'The {boss} shrivels with a sound like a very small sulk.',
+        '{Boss} shrivels with a sound like a very small sulk.',
         'For a moment it sounded exactly like {tori}.',
       ],
     },
@@ -137,10 +139,10 @@ window.BAMBER_LORE = {
       closed: 'Too hot! Wait for it to cool',
       intro: [
         'A furnace stirs in the dark. Its grate glows like an eye.',
-        'The {boss} wakes. Watch its pattern: only a cool core can be hit.',
+        '{Boss} wakes. Watch its pattern: only a cool core can be hit.',
       ],
       defeat: [
-        'The {boss} cracks, sighs, and goes cold.',
+        '{Boss} cracks, sighs, and goes cold.',
         'For a moment it sounded a lot like {tori} sulking.',
       ],
     },

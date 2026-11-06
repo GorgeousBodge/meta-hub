@@ -12,6 +12,15 @@ BamberEngine.part((X) => {
   const WISP_RELOAD = 3;                // turns between embers
   const BOSS_COOL = [4, 4, 3];          // turns its core stays open, by hits taken
   const CRACK_TURNS = 6;                // how long slam cracks stay open
+  // How hard each thing hits, in half-hearts (2 = one whole heart)
+  const DAMAGE = {
+    hogCharge: 3,                       // a Bristlehog charging into Bodge
+    mimmet: 2,                          // walking into a Mimmet's mirror step
+    ember: 1,                           // a Spindlewisp's (or a boss's) ember
+    slam: 3,                            // the Kilnwarden's slam
+    roots: 3,                           // the Thornmother's roots
+  };
+  X.DAMAGE = DAMAGE;
   const THORN_WAVES = [2, 2, 3];        // root waves before the Thornmother's heart opens, by hits taken
   const THORN_OPEN = [4, 3, 3];         // turns her heart stays open, by hits taken
   const solid = (o) => SOLID_OBJ.includes(o || '-');
@@ -48,7 +57,7 @@ BamberEngine.part((X) => {
       const nx = em.x + em.dx, ny = em.y + em.dy;
       const gone = () => R.embers.splice(R.embers.indexOf(em), 1);
       if (!inB(nx, ny)) { gone(); continue; }
-      if (X.isHero(nx, ny)) { gone(); X.hurt(1); continue; }
+      if (X.isHero(nx, ny)) { gone(); X.hurt(DAMAGE.ember); continue; }
       const o = X.objAt(nx, ny), t = X.baseAt(nx, ny);
       if (o === 'b' || o === 'l') {
         R.obj[key(nx, ny)] = 'l'; R.burn[key(nx, ny)] = (X.def().burn || 10) + 1;
@@ -61,7 +70,7 @@ BamberEngine.part((X) => {
   function spawnEmber(x, y, dx, dy) {
     const R = X.R;
     if (!inB(x, y)) return;
-    if (X.isHero(x, y)) { X.hurt(1); return; }
+    if (X.isHero(x, y)) { X.hurt(DAMAGE.ember); return; }
     const t = X.baseAt(x, y), o = X.objAt(x, y);
     if ('#DBS'.includes(t) || solid(o) || X.enemyAt(x, y)) return;
     R.embers.push({ x, y, dx, dy });
@@ -99,7 +108,7 @@ BamberEngine.part((X) => {
       for (let i = 0; i < HOG_SPEED; i++) {
         const nx = e.x + dx, ny = e.y + dy;
         if (X.isHero(nx, ny)) {
-          X.hurt(2);
+          X.hurt(DAMAGE.hogCharge);
           if (X.heroCanStand(G.px + dx, G.py + dy)) { G.px += dx; G.py += dy; }
           e.st = 'idle';
           return;
@@ -162,7 +171,7 @@ BamberEngine.part((X) => {
     const [dx, dy] = DIRS[ctx.moved];
     const mx = e.x - dx, my = e.y + dy;
     e.face = dx ? (dx > 0 ? 'left' : 'right') : ctx.moved;
-    if (X.isHero(mx, my)) { X.hurt(1); on.fx('hit', { x: mx, y: my }); return; }
+    if (X.isHero(mx, my)) { X.hurt(DAMAGE.mimmet); on.fx('hit', { x: mx, y: my }); return; }
     if (X.enemyCanStand(mx, my, e)) {
       e.x = mx; e.y = my;
       const em = X.emberAt(mx, my);
@@ -207,7 +216,7 @@ BamberEngine.part((X) => {
         on.fx('shake');
         R.marks = [];
         b.waves += 1;
-        if (hit) X.hurt(2);
+        if (hit) X.hurt(DAMAGE.roots);
         if (b.waves >= THORN_WAVES[Math.min(b.hits, THORN_WAVES.length - 1)]) {
           b.waves = 0;
           b.phase = 'open';
@@ -246,7 +255,7 @@ BamberEngine.part((X) => {
         on.fx('shake');
         R.marks = [];
         b.phase = 'slam';
-        if (hit) X.hurt(2);
+        if (hit) X.hurt(DAMAGE.slam);
         break;
       }
       case 'slam': {
