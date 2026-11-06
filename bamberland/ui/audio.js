@@ -47,6 +47,8 @@
     smash: [[150, 0.07, 'square', 0.06]],
     light: [[520, 0.05, 'triangle', 0.05], [780, 0.06, 'triangle', 0.04]],
     vault: [[240, 0.05, 'triangle', 0.06], [480, 0.08, 'triangle', 0.05]],
+    hook: [[600, 0.03, 'triangle', 0.05], [300, 0.05, 'triangle', 0.05], [450, 0.07, 'triangle', 0.05]],
+    lever: [[140, 0.05, 'square', 0.05], [220, 0.06, 'triangle', 0.05]],
     defeat: [[400, 0.05, 'triangle', 0.05], [200, 0.09, 'triangle', 0.05]],
     thud: [[70, 0.1, 'square', 0.07]],
     spit: [[700, 0.04, 'triangle', 0.03]],

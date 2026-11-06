@@ -101,6 +101,7 @@
     coin: '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5a6 6 0 0 1 6 6c0 4.2-3.4 7.5-6 7.5s-6-3.3-6-7.5a6 6 0 0 1 6-6Z"/><path d="M11 16h2l-1 1.6ZM12 17.6c-1.5 1.6 1.5 2.4 0 4"/></svg>',
     thwacker: '<svg viewBox="0 0 24 24" class="ico"><rect x="11" y="3" width="10" height="7" rx="1.5" transform="rotate(35 16 6.5)"/><path d="M12.5 10.5 4 20"/><circle cx="16.3" cy="6.6" r="1.2"/></svg>',
     hopstaff: '<svg viewBox="0 0 24 24" class="ico"><path d="M6 21 18 3"/><path d="M15.5 6.5c1.8.4 2.8 1.6 2.5 3.4M8.5 17.5c-1.8-.4-2.8-1.6-2.5-3.4"/></svg>',
+    grapple: '<svg viewBox="0 0 24 24" class="ico"><circle cx="8" cy="15" r="5"/><circle cx="8" cy="15" r="2"/><path d="M12 11.5 18 4M18 4c2.2 0 2.6 2 2 3.2M18 4c0-2.2-2-2.6-3.2-2"/></svg>',
   };
   function updateHud() {
     const G = game.G;
@@ -112,6 +113,8 @@
     }
     $('hearts').innerHTML = hearts.join('');
     $('hearts').classList.toggle('is-shielded', G.shield > 0);
+    $('hearts').classList.toggle('is-many', G.maxHearts > 10 && G.maxHearts <= 14);
+    $('hearts').classList.toggle('is-lots', G.maxHearts > 14);
     $('keys').innerHTML = `${ICONS.key}<b>${G.keys}</b>`;
     $('keys').hidden = game.R.field && !G.keys;          // keys only matter in dungeons
     $('bigkey').innerHTML = ICONS.bigkey;
@@ -242,7 +245,7 @@
   function openRing(keep) {
     const G = game.G;
     const items = [];
-    for (const id of ['thwacker', 'hopstaff']) {
+    for (const id of ['thwacker', 'hopstaff', 'grapple']) {
       if (G.items[id]) { const info = itemInfo(id); items.push({ id, kind: 'item', name: info.name, desc: info.desc, on: G.equip === id }); }
     }
     for (const [id, e] of Object.entries(LORE.elixirs)) {

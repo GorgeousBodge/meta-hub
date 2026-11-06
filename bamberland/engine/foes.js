@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Bamberland — foes: Bristlehog, Spindlewisp, Mimmet, embers, the boss.
+   Bamberland — foes: Bristlehog, Spindlewisp, Mimmet, embers, the bosses.
    Each enemy type has a turn function in X.turn, run once per world turn.
    ctx.moved is the direction Bodge stepped, or undefined if he didn't.
    ========================================================================== */
@@ -10,8 +10,11 @@ BamberEngine.part((X) => {
   const HOG_SPEED = 3;                  // tiles per turn when charging
   const HOG_STUN = 5;                   // turns a hog stays dizzy after hitting a wall
   const WISP_RELOAD = 3;                // turns between embers
-  const BOSS_COOL = [4, 4, 3];          // turns its core stays open, by hits taken
-  const CRACK_TURNS = 6;                // how long slam cracks stay open
+  const BOSS_COOL = [4, 4, 3];          // turns the Kilnwarden's core stays cool, by hits taken
+  const KILN_VENT = [3, 5, 5];          // turns its glowing vents stay open to the Grapple Line, by hits taken
+  const KILN_BELCH = ['rows', 'cols', 'both'];  // which way its embers fly, by hits taken
+  const KILN_VENTS = [1, 2, 2];         // vents (on that side; each side has two) to yank before its core cools
+  const CRACK_TURNS = 2;                // how long slam cracks stay open
   // How hard each thing hits, in half-hearts (2 = one whole heart)
   const DAMAGE = {
     hogCharge: 3,                       // a Bristlehog charging into Bodge
@@ -63,7 +66,7 @@ BamberEngine.part((X) => {
         R.obj[key(nx, ny)] = 'l'; R.burn[key(nx, ny)] = (X.def().burn || 10) + 1;
         on.sound('light'); gone(); continue;
       }
-      if ('#DBS'.includes(t) || solid(o) || X.enemyAt(nx, ny) || X.bossAt(nx, ny)) { gone(); continue; }
+      if (X.HIGH.includes(t) || solid(o) || X.enemyAt(nx, ny) || X.bossAt(nx, ny)) { gone(); continue; }
       em.x = nx; em.y = ny;
     }
   };
@@ -72,7 +75,7 @@ BamberEngine.part((X) => {
     if (!inB(x, y)) return;
     if (X.isHero(x, y)) { X.hurt(DAMAGE.ember); return; }
     const t = X.baseAt(x, y), o = X.objAt(x, y);
-    if ('#DBS'.includes(t) || solid(o) || X.enemyAt(x, y)) return;
+    if (X.HIGH.includes(t) || solid(o) || X.enemyAt(x, y)) return;
     R.embers.push({ x, y, dx, dy });
   }
 
@@ -179,10 +182,11 @@ BamberEngine.part((X) => {
     }
   };
 
-  /* ---------- the boss: mark, slam, vent, cool ---------- */
+  /* ---------- the Kilnwarden's marks: Bodge's tile and the four corners round it ---------- */
   function setMarks() {
     const G = X.G, R = X.R, b = R.boss;
     b.phase = 'mark';
+    b.side = null; b.opened = [];
     R.marks = [];
     for (const [dx, dy] of [[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       const x = G.px + dx, y = G.py + dy;
@@ -234,15 +238,55 @@ BamberEngine.part((X) => {
     }
   }
 
-  X.bossTurn = () => {
+  /* ---------- the Kilnwarden: belch, mark, slam, vents, cool ----------
+     1. It belches embers out of its sides: along its rows at first, along its
+        columns once hit, both on its last heart. Stand out of those lines.
+     2. It marks Bodge's tile and the four corners round it (an X).
+     3. Next turn it slams: marked tiles crack, and Bodge is hurt if he's on one.
+     4. The cooling vents on the side facing Bodge glow, for a few turns.
+        Line up with one and throw the Grapple Line at it to yank it open.
+        Once hit, it needs both vents on that side.
+     5. With its vents open the core cools: vault the moat and strike it.
+     Miss the vents and it starts again, still hot.                            */
+  // the vents on the side facing Bodge glow
+  function kilnVent(b) {
+    const G = X.G, dx = G.px - (b.x + 0.5), dy = G.py - (b.y + 0.5);
+    b.side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'e' : 'w') : (dy > 0 ? 's' : 'n');
+    b.t = KILN_VENT[Math.min(b.hits, KILN_VENT.length - 1)];
+    b.need = KILN_VENTS[Math.min(b.hits, KILN_VENTS.length - 1)];
+    b.opened = [];
+    b.phase = 'vent';
+  }
+  // Embers out of its sides: along its rows at first, along its columns once
+  // hit, and both ways on its last heart (KILN_BELCH)
+  function kilnBelch(b) {
+    const way = KILN_BELCH[Math.min(b.hits, KILN_BELCH.length - 1)];
+    const out = [];
+    if (way !== 'cols') out.push(
+      [b.x - 1, b.y, -1, 0], [b.x - 1, b.y + 1, -1, 0],
+      [b.x + 2, b.y, 1, 0], [b.x + 2, b.y + 1, 1, 0],
+    );
+    if (way !== 'rows') out.push(
+      [b.x, b.y - 1, 0, -1], [b.x + 1, b.y - 1, 0, -1],
+      [b.x, b.y + 2, 0, 1], [b.x + 1, b.y + 2, 0, 1],
+    );
+    for (const [x, y, dx, dy] of out) spawnEmber(x, y, dx, dy);
+    on.sound('spit');
+    b.side = null; b.opened = [];
+    b.phase = 'stoke';
+  }
+  function kilnTurn() {
     const R = X.R, b = R.boss;
-    if (b.type === 'thorn') { thornTurn(); return; }
     switch (b.phase) {
       case 'wake':
         b.t -= 1;
-        if (b.t <= 0) setMarks();
+        if (b.t <= 0) kilnBelch(b);
         break;
       case 'recoil':
+        // one quiet turn after a hit, so Bodge can find his feet
+        b.phase = 'wake'; b.t = 1;
+        break;
+      case 'stoke':
         setMarks();
         break;
       case 'mark': {
@@ -254,36 +298,50 @@ BamberEngine.part((X) => {
         on.sound('slam');
         on.fx('shake');
         R.marks = [];
-        b.phase = 'slam';
         if (hit) X.hurt(DAMAGE.slam);
-        break;
-      }
-      case 'slam': {
-        const out = [
-          [b.x - 1, b.y, -1, 0], [b.x - 1, b.y + 1, -1, 0],
-          [b.x + 2, b.y, 1, 0], [b.x + 2, b.y + 1, 1, 0],
-        ];
-        if (b.hits >= 1) out.push(
-          [b.x, b.y - 1, 0, -1], [b.x + 1, b.y - 1, 0, -1],
-          [b.x, b.y + 2, 0, 1], [b.x + 1, b.y + 2, 0, 1],
-        );
-        for (const [x, y, dx, dy] of out) spawnEmber(x, y, dx, dy);
-        on.sound('spit');
-        b.phase = 'vent';
+        kilnVent(b);
         break;
       }
       case 'vent':
-        b.phase = 'cool';
-        b.t = BOSS_COOL[Math.min(b.hits, BOSS_COOL.length - 1)];
-        on.sound('cool');
+        b.t -= 1;
+        if (b.t <= 0) { on.toast(X.fmt(LORE.messages.ventShut)); kilnBelch(b); }
         break;
       case 'cool':
         b.t -= 1;
-        if (b.t <= 0) setMarks();
+        if (b.t <= 0) kilnBelch(b);
         break;
       default:
-        setMarks();
+        kilnBelch(b);
     }
+  }
+  // The Grapple Line hits the boss on tile x, y, thrown while Bodge faces `face`
+  X.grappleBoss = (x, y, face) => {
+    const R = X.R, b = R.boss;
+    if (!b || b.type !== 'kiln') { on.sound('clang'); on.toast(X.fmt(LORE.messages.clink)); return; }
+    const side = { up: 's', down: 'n', left: 'e', right: 'w' }[face];
+    // which of that side's two vents: 0 = left / top, 1 = right / bottom
+    const vent = side + ((side === 'n' || side === 's') ? x - b.x : y - b.y);
+    b.opened = b.opened || [];
+    if (b.phase !== 'vent' || side !== b.side || b.opened.includes(vent)) {
+      on.sound('clang');
+      on.toast(X.fmt(LORE.messages.ventShut));
+      return;
+    }
+    b.opened.push(vent);
+    b.need -= 1;
+    on.sound('cool');
+    on.fx('steam', { x, y });
+    if (b.need > 0) { on.toast(X.fmt(LORE.messages.ventOne)); return; }
+    b.side = null;
+    b.phase = 'cool';
+    b.t = BOSS_COOL[Math.min(b.hits, BOSS_COOL.length - 1)] + 1;   // the world's turn takes one straight away
+    on.toast(X.fmt(LORE.messages.cooled));
+  };
+
+  X.bossTurn = () => {
+    const b = X.R.boss;
+    if (b.type === 'thorn') thornTurn();
+    else kilnTurn();
   };
   X.strikeBoss = () => {
     const G = X.G, R = X.R, b = R.boss;

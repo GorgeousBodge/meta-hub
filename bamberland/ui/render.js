@@ -57,6 +57,8 @@
       const tint = tintOf(R.id);
       drawWalls(g, R, tint);
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) drawTile(g, R, q, x, y, tint);
+      const wd = window.BAMBER_WORLD.rooms[R.id];
+      if (wd && wd.wheel) drawWheel(g, wd, G, tint);
       // Boss warnings under everything that moves
       for (const [x, y] of R.marks || []) drawMark(g, x, y);
       for (const [k, o] of Object.entries(R.obj)) {
@@ -168,8 +170,10 @@
   function drawTile(g, R, q, x, y, tint) {
     const t = R.base[y][x], X = px(x), Y = py(y);
     const cracked = R.cracks && R.cracks[x + ',' + y];
-    if (t === '#') return;
+    if (t === '#' || t === '*') return;
     if (t === '%') { Px.blit(g, Px.art('thorns', 'day'), X, Y); return; }
+    if (t === 'M') { drawMachineGate(g, X, Y); return; }
+    if (t === 'G') { drawSluiceGate(g, X, Y); return; }
     if (t === '~' || cracked) { drawGap(g, X, Y, !!cracked); return; }
     // floor: a small cross at the tile centre
     stroke(g, tint ? tint.floor : 'rgba(63,224,255,0.16)', 1, 0);
@@ -187,7 +191,64 @@
     else if (t === 'B') drawDoor(g, X, Y, true);
     else if (t === 'S') drawShutter(g, X, Y, false);
     else if (t === 's') drawShutter(g, X, Y, true);
-    else if (t === 'd') drawOpenDoor(g, X, Y);
+    else if (t === 'd' || t === 'g') drawOpenDoor(g, X, Y);
+  }
+
+  // A machinery gate: bars with a cog in the middle. Lifts when the mill wakes up.
+  function drawMachineGate(g, X, Y) {
+    drawShutter(g, X, Y, false);
+    stroke(g, C.amber, 2, 8);
+    const cx = X + 20, cy = Y + 20;
+    g.beginPath(); g.arc(cx, cy, 7, 0, Math.PI * 2); g.stroke();
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      g.moveTo(cx + Math.cos(a) * 7, cy + Math.sin(a) * 7); g.lineTo(cx + Math.cos(a) * 11, cy + Math.sin(a) * 11);
+    }
+    g.stroke();
+  }
+  // A sluice gate: a heavy slab in a frame, with a ring to hook
+  function drawSluiceGate(g, X, Y) {
+    stroke(g, C.cyan, 2, 6);
+    rr(g, X + 4, Y + 3, 32, 34, 2); g.stroke();
+    stroke(g, C.cyanDim, 1.5, 0);
+    g.beginPath();
+    for (const yy of [12, 20, 28]) { g.moveTo(X + 8, Y + yy); g.lineTo(X + 32, Y + yy); }
+    g.stroke();
+    stroke(g, C.amber, 2, 10);
+    g.beginPath(); g.arc(X + 20, Y + 30, 4, 0, Math.PI * 2); g.stroke();
+  }
+
+  // The mill wheel, over its 3×3 of machinery. Still: spokes stand where they
+  // are. Each stage of the machinery turns it a notch; once the mill runs,
+  // it turns a little every turn (only when the picture is redrawn anyway).
+  function drawWheel(g, d, G, tint) {
+    const [wx, wy] = d.wheel;
+    const cx = px(wx) + 20, cy = py(wy) + 20;
+    const stages = (d.stages || []).filter((f) => G.story[f]).length;
+    const running = G.story.sun_mill;
+    const a = (stages * 0.35) + (running ? (G.turns % 12) * (Math.PI / 24) : 0);
+    const col = running ? C.cyan : stages ? tint.full : tint.dim;
+    stroke(g, col, 2.5, running ? 14 : 4);
+    g.beginPath(); g.arc(cx, cy, 54, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(cx, cy, 44, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(cx, cy, 8, 0, Math.PI * 2); g.stroke();
+    g.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const s = a + (i / 8) * Math.PI * 2;
+      g.moveTo(cx + Math.cos(s) * 8, cy + Math.sin(s) * 8); g.lineTo(cx + Math.cos(s) * 44, cy + Math.sin(s) * 44);
+      // paddles
+      g.moveTo(cx + Math.cos(s - 0.12) * 54, cy + Math.sin(s - 0.12) * 54); g.lineTo(cx + Math.cos(s + 0.12) * 60, cy + Math.sin(s + 0.12) * 60);
+    }
+    g.stroke();
+    if (stages || running) {
+      // water: a few blue strokes falling into the pit
+      stroke(g, 'rgba(164,224,255,0.75)', 2, 6);
+      g.beginPath();
+      for (const ox of [-14, 0, 14]) { g.moveTo(cx + ox, cy - 74); g.lineTo(cx + ox + 2, cy - 60); }
+      if (running) for (const ox of [-30, 30]) { g.moveTo(cx + ox, cy + 62); g.quadraticCurveTo(cx + ox * 1.2, cy + 70, cx + ox * 1.4, cy + 66); }
+      g.stroke();
+    }
   }
 
   function drawGap(g, X, Y, cracked) {
@@ -268,6 +329,28 @@
         Px.blit(g, Px.art(PIX_OBJ[o], 'day'), X + (o === 'Y' ? 5 : 0), Y + (o === 'Y' ? 5 : 0), o === 'Y' ? 3 : 4);
         break;
       case 'b': case 'l': case 'L': drawBrazier(g, cx, cy, o, R.burn && R.burn[x + ',' + y]); break;
+      case 'I': // a post to hook: a stake with a ring at the top
+        stroke(g, C.cyan, 2.5, 8);
+        g.beginPath(); g.moveTo(cx, Y + 14); g.lineTo(cx, Y + 36); g.moveTo(cx - 8, Y + 36); g.lineTo(cx + 8, Y + 36); g.stroke();
+        stroke(g, C.amber, 2.5, 10);
+        g.beginPath(); g.arc(cx, Y + 9, 5, 0, Math.PI * 2); g.stroke();
+        break;
+      case '!': case 'j': { // a lever: up (waiting) or down (pulled)
+        const down = o === 'j', spring = R.springs && R.springs[x + ',' + y];
+        stroke(g, C.cyan, 2, 6);
+        rr(g, X + 8, Y + 28, 24, 8, 2); g.stroke();
+        stroke(g, down ? C.green : C.amber, 3, down ? 6 : 12);
+        g.beginPath();
+        if (down) { g.moveTo(cx, Y + 30); g.lineTo(cx + 13, Y + 18); } else { g.moveTo(cx, Y + 30); g.lineTo(cx - 9, Y + 10); }
+        g.stroke();
+        noGlow(g); g.fillStyle = down ? C.green : C.amber;
+        g.beginPath(); g.arc(down ? cx + 13 : cx - 9, down ? Y + 18 : Y + 10, 3.5, 0, Math.PI * 2); g.fill();
+        if (down && spring) {
+          // turns before it springs back
+          for (let i = 0; i < spring - 1; i++) g.fillRect(X + 6 + i * 4, Y + 2, 2, 2);
+        }
+        break;
+      }
       case 'X':
         drawHeart(g, cx, cy, 11, C.red);
         stroke(g, C.amber, 1.5, 8);
@@ -432,7 +515,7 @@
     stroke(g, col, 2.5, cool ? 4 : 18);
     rr(g, X + 6, Y + 14, 68, 60, 12); g.stroke();
     if (!cool) { g.fillStyle = 'rgba(255,92,122,0.10)'; g.fill(); }
-    g.beginPath(); g.moveTo(X + 50, Y + 14); g.lineTo(X + 50, Y + 2); g.lineTo(X + 62, Y + 2); g.lineTo(X + 62, Y + 14); g.stroke();
+    g.beginPath(); g.moveTo(X + 60, Y + 16); g.lineTo(X + 60, Y + 2); g.lineTo(X + 70, Y + 2); g.lineTo(X + 70, Y + 20); g.stroke();
     // grate "eye"
     rr(g, cx - 18, cy - 4, 36, 22, 6); g.stroke();
     if (cool) {
@@ -445,6 +528,34 @@
       for (const gx of [-10, 0, 10]) { g.moveTo(cx + gx, cy - 1); g.lineTo(cx + gx, cy + 15); }
       g.stroke();
     }
+    // cooling vents, two on each side: shut (dim), glowing with a ring to hook, or open (steam)
+    const open = b.opened || [];
+    for (const side of ['n', 'e', 's', 'w']) for (const half of [0, 1]) {
+      const id = side + half, glowing = b.phase === 'vent' && b.side === side && !open.includes(id), opened = open.includes(id);
+      const along = half ? 1 : -1;     // left/top vent or right/bottom one
+      // just outside the body, one in front of each of the tiles on that side
+      const [vx, vy, w, h] = {
+        n: [cx + (half ? 4 : -18), Y + 5, 14, 7], s: [cx + (half ? 4 : -18), Y + 75, 14, 7],
+        w: [X - 1, cy + (half ? 4 : -18), 7, 14], e: [X + 74, cy + (half ? 4 : -18), 7, 14],
+      }[side];
+      stroke(g, glowing ? C.white : opened ? C.cyan : C.amberDim, glowing ? 2.5 : 1.5, glowing ? 16 : opened ? 10 : 0);
+      rr(g, vx, vy, w, h, 2); g.stroke();
+      const mx = vx + w / 2, my = vy + h / 2;
+      const [ox, oy] = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] }[side];
+      if (glowing) {
+        g.fillStyle = 'rgba(255,194,74,0.35)'; g.fill();
+        g.beginPath(); g.arc(mx + ox * 10, my + oy * 10, 4.5, 0, Math.PI * 2); g.stroke();
+      }
+      if (opened) {
+        stroke(g, 'rgba(164,224,255,0.7)', 1.5, 6);
+        g.beginPath(); g.moveTo(mx + ox * 4, my + oy * 4);
+        g.quadraticCurveTo(mx + ox * 9 + oy * 4 * along, my + oy * 9 + ox * 4 * along, mx + ox * 14, my + oy * 14); g.stroke();
+      }
+    }
+    if (b.phase === 'vent') {
+      noGlow(g); g.fillStyle = C.amber; g.font = `700 12px ${FONT}`; g.textAlign = 'center';
+      g.textBaseline = 'middle'; g.fillText('VENT ' + b.t, cx, Y + 27);
+    }
     // feet
     stroke(g, col, 2.5, 6);
     g.beginPath(); g.moveTo(X + 16, Y + 74); g.lineTo(X + 14, Y + 79); g.moveTo(X + 64, Y + 74); g.lineTo(X + 66, Y + 79); g.stroke();
@@ -456,7 +567,7 @@
     }
     if (cool) {
       noGlow(g); g.fillStyle = C.cyan; g.font = `700 12px ${FONT}`; g.textAlign = 'center';
-      g.textBaseline = 'middle'; g.fillText('COOL ' + b.t, cx - 6, Y + 27);
+      g.textBaseline = 'middle'; g.fillText('COOL ' + b.t, cx, Y + 27);
     }
   }
 
@@ -532,6 +643,16 @@
     } else if (f.type === 'poof') {
       stroke(g, C.cyanDim, 2, 8);
       for (const r of [8, 15]) { g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); }
+    } else if (f.type === 'line') {
+      // the Grapple Line, for one frame: from Bodge to where the hook went
+      const hx = px(G.px) + 20, hy = py(G.py) + 18;
+      stroke(g, C.white, 2, 8);
+      g.beginPath(); g.moveTo(hx, hy); g.lineTo(cx, cy); g.stroke();
+      stroke(g, C.amber, 2.5, 10);
+      g.beginPath(); g.arc(cx, cy, 5, 0, Math.PI * 2); g.stroke();
+    } else if (f.type === 'steam') {
+      stroke(g, 'rgba(164,224,255,0.8)', 2, 10);
+      for (const r of [7, 13, 19]) { g.beginPath(); g.arc(cx, cy, r, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
     } else if (f.type === 'vault') {
       stroke(g, C.cyanDim, 2, 6);
       g.setLineDash([3, 5]);
@@ -638,6 +759,16 @@
       g.moveTo(x - 12, y + 16); g.lineTo(x + 12, y - 16);
       g.moveTo(x + 4, y - 14); g.quadraticCurveTo(x + 14, y - 10, x + 13, y - 2);
       g.moveTo(x - 4, y + 14); g.quadraticCurveTo(x - 14, y + 10, x - 13, y + 2);
+      g.stroke();
+    } else if (id === 'grapple') {
+      // a coil of line with a three-pronged hook
+      g.arc(x - 4, y + 5, 9, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(x - 4, y + 5, 4.5, 0, Math.PI * 2); g.stroke();
+      g.beginPath();
+      g.moveTo(x + 4, y - 1); g.lineTo(x + 11, y - 10);
+      g.moveTo(x + 11, y - 10); g.quadraticCurveTo(x + 16, y - 10, x + 15, y - 5);
+      g.moveTo(x + 11, y - 10); g.quadraticCurveTo(x + 11, y - 16, x + 6, y - 15);
+      g.moveTo(x + 11, y - 10); g.lineTo(x + 15, y - 15);
       g.stroke();
     } else if (id === 'reset') {
       g.arc(x, y, 13, -Math.PI * 0.2, Math.PI * 1.45); g.stroke();

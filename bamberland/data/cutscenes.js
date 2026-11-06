@@ -61,6 +61,35 @@ window.BAMBER_CUTS = {
       'T.,......~~...T',
       'TTTTTTTTT~~TTTT',
     ],
+    // the river crossing: B is a bridge, x a broken one
+    crossing: [
+      'TTTTTTTTT~~:TTT',
+      'T..,.....~~:..T',
+      'T.*......~~:..T',
+      'T........~~:..T',
+      'T..,.....~~:..T',
+      '~~~~~~~~~~~x~~~',
+      '~~~~~~~~~~~x~~~',
+      '~~~~~~~~~~~x~~~',
+      'T..*.......:..T',
+      'T....,.....:..T',
+      'T..........f..T',
+      'TTTTTTTTTTTTTTT',
+    ],
+    bridge: [
+      'TTTTTTTTT~~:TTT',
+      'T..,.....~~:..T',
+      'T.*......~~:..T',
+      'T........~~:..T',
+      'T..,.....~~:..T',
+      '~~~~~~~~~~~B~~~',
+      '~~~~~~~~~~~B~~~',
+      '~~~~~~~~~~~B~~~',
+      'T..*.......:..T',
+      'T....,.....:..T',
+      'T..........f..T',
+      'TTTTTTTTTTTTTTT',
+    ],
   },
 
   opening: {
@@ -213,6 +242,15 @@ window.BAMBER_CUTS = {
         ],
       },
       {
+        text: 'Deep in the mill, the great wheel creaks, shudders, and turns. Old timbers rattle loose.',
+        dur: 1.4,
+        ground: { map: 'vale', tone: 'day' },
+        layers: [
+          { art: 'hero', face: 'up', x: 280, y: 300, hop: true },
+          { art: 'telk', x: [620, 380], y: 290, flip: true },
+        ],
+      },
+      {
         text: 'Somewhere far off, {tori} stamps her foot and cranks up the A/C.',
         dur: 1,
         ground: { map: 'meadow', tone: 'gloom' },
@@ -220,6 +258,38 @@ window.BAMBER_CUTS = {
           { art: 'cloud', x: 100, y: 30 },
           { art: 'cloud', x: 360, y: 60, flip: true },
           { art: 'tori', x: 268, y: 190, scale: 6, tone: 'day', hop: 1 },
+        ],
+      },
+    ],
+  },
+  bridge: {
+    music: 'town',
+    panels: [
+      {
+        text: '{telk} staggers in under a stack of mill timber, and sits down on it.',
+        dur: 1.6,
+        ground: { map: 'crossing', tone: 'day' },
+        layers: [
+          { art: 'brendan', x: 480, y: 70 },
+          { art: 'telk', x: [620, 520], y: 120, flip: true, hop: true },
+        ],
+      },
+      {
+        text: '{brendan} rolls up his sleeves. *thunk* *thunk* *hammer hammer hammer*',
+        dur: 1.6,
+        ground: { map: 'crossing', tone: 'day' },
+        layers: [
+          { art: 'brendan', x: [480, 440], y: [70, 190], hop: 1 },
+          { art: 'telk', x: 520, y: 120, flip: true, stars: true },
+        ],
+      },
+      {
+        text: 'A bridge! Well. A bridge-shaped promise. The road goes on.',
+        dur: 1.4,
+        ground: { map: 'bridge', tone: 'day' },
+        layers: [
+          { art: 'brendan', x: 500, y: 110, flip: true },
+          { art: 'hero', face: 'down', x: 440, y: [20, 110] },
         ],
       },
     ],

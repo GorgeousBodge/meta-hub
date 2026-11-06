@@ -8,9 +8,9 @@ const WORLD = S.BAMBER_WORLD, LORE = S.BAMBER_LORE, ART = S.BAMBER_ART, CUTS = S
 const problems = [];
 const bad = (room, msg) => problems.push(`${room}: ${msg}`);
 const W = 15, H = 12;
-const DUNGEON = '#.~_DBS%OPC=NbLKHX$hwmZ';
-const FIELD = '.,:T*f~%NC=PKHX$@hwm';
-const DOORWAY = { field: '.,:', dungeon: '._DBS' };
+const DUNGEON = '#.~_DBS%OPC=NbLKHX$hwmZIG!*123';
+const FIELD = '.,:T*f~%NC=PKHX$@hwmB';
+const DOORWAY = { field: '.,:', dungeon: '._DBS123' };
 const EDGE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
 const BACK = { n: 's', s: 'n', e: 'w', w: 'e' };
 const ELIXIRS = Object.keys(LORE.elixirs);
@@ -49,6 +49,7 @@ for (const [id, d] of Object.entries(WORLD.rooms)) {
   for (const c of d.chests || []) if (!goodGive(c)) bad(id, `chest holds unknown "${c}"`);
   for (const t of d.talk || []) {
     if (!LORE.people[t.who]) bad(id, `talk: no person "${t.who}" in lore.js`);
+    if (t.here) [].concat(t.here.if || [], t.here.unless || []).forEach((f) => flagsUsed.push([id, f]));
     for (const o of t.say || [t]) {
       if (!o.lines || !o.lines.length) bad(id, `talk for ${t.who} has an option with no lines`);
       if (o.shop && !WORLD.shops[o.shop]) bad(id, `talk opens unknown shop "${o.shop}"`);
@@ -61,6 +62,18 @@ for (const [id, d] of Object.entries(WORLD.rooms)) {
     }
   }
   if (d.thorns) flagsUsed.push([id, d.thorns]);
+  if (d.bridge) flagsUsed.push([id, d.bridge]);
+  if (all.includes('B') && field && !d.bridge) bad(id, 'a B bridge on the map but no bridge: story flag');
+  [].concat(d.sets || []).forEach((f) => flagsSet.add(f));
+  if (d.sets && !d.solve) bad(id, 'sets a story flag when solved, but has no solve');
+  // machinery gates 1 2 3 need a story flag in stages
+  for (const n of '123') if (!field && all.includes(n)) {
+    const f = (d.stages || [])[Number(n) - 1];
+    if (!f) bad(id, `gate ${n} on the map but no stages[${Number(n) - 1}]`); else flagsUsed.push([id, f]);
+  }
+  if (d.wheel && (!all.includes('*'))) bad(id, 'wheel: but no * machinery on the map');
+  if (d.solve === 'levers' && !all.includes('!')) bad(id, "solve: 'levers' but no ! lever on the map");
+  if (all.includes('!') && d.solve !== 'levers') bad(id, "levers on the map, but solve isn't 'levers'");
   if (d.cut && !CUTS[d.cut]) bad(id, `unknown cut scene "${d.cut}"`);
   if (d.music && !MUSIC[d.music]) bad(id, `unknown tune "${d.music}"`);
   for (const b of d.buildings || []) {

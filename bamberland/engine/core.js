@@ -15,12 +15,15 @@
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   const EDGE = { up: 'n', down: 's', left: 'w', right: 'e' };
   const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
-  const TERRAIN = '#.~_DBS%';          // % in a dungeon: thorns (vault over them, like a gap)
-  const OBJECTS = 'OPC=NbLKHX$';
+  // % in a dungeon: thorns (vault over them, like a gap). G: a sluice gate (yank it open).
+  // * : machinery (the mill wheel; solid, drawn by the room). 1 2 3: machinery gates (see stages).
+  const TERRAIN = '#.~_DBS%G*';
+  const OBJECTS = 'OPC=NbLKHX$I!';      // I: a post to hook; !: a lever
   const ENEMY_CHARS = { h: 'hog', w: 'wisp', m: 'mimmet' };
-  const SOLID_OBJ = 'OPCc=NblL';
-  const TALL_OBJ = 'Cc=NblL';           // can't be vaulted over
-  const WALK = '._ds';                  // floor, plate, open door, open shutter
+  const SOLID_OBJ = 'OPCc=NblLI!j';
+  const TALL_OBJ = 'Cc=NblLI!j';        // can't be vaulted over
+  const WALK = '._dsg';                 // floor, plate, open door, open shutter, open sluice gate
+  const HIGH = '#DBSMG*';               // blocks throws, embers, vaults and the Grapple Line
   const FIELD_SOLID = 'T*f~%';          // outdoor: tree, bush, fence, water, brambles
   const KEEP_TAKEN = 'KX$';             // pickups that stay gone once taken
 
@@ -31,21 +34,70 @@
   const DROP_EVERY = 3;                 // every 3rd pot or foe drops something
   const DROP_HEART_BELOW = 2;           // ...a heart only if Bodge is missing at least this much (halves); else a Luftballon
   const POCKET = 5;                     // {coins} in a $ on the map
-  const SAVE_VERSION = 2;
+  const GRAPPLE_RANGE = 5;              // how far the Grapple Line reaches, in tiles
+  const SAVE_VERSION = 3;
 
   const key = (x, y) => x + ',' + y;
   const inB = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const clone = (o) => JSON.parse(JSON.stringify(o));
 
+  // Rooms of the Mill prototype and the first Sunk Mill (save version 2), now rebuilt
+  const OLD_MILL = ['gate', 'hall', 'sluice', 'corridor', 'maze', 'shrine', 'embers', 'gaps', 'ante', 'lair'];
+
   /* A save from an older version is upgraded here, one version at a time.
-     Return { save } when it can be used, or { error } when it can't. */
-  function migrate(s) {
+     Return { save } when it can be used, or { error } when it can't.
+     world (optional) lets an upgrade look at the rooms as they are now. */
+  function migrate(s, world) {
     if (!s || typeof s !== 'object') return { error: 'empty' };
     if (s.v === 1) return { error: 'old' };          // the Mill prototype: different world
-    // if (s.v === 2) s = twoToThree(s);              // future upgrades go here
-    if (s.v === SAVE_VERSION) return { save: s };
     if (s.v > SAVE_VERSION) return { error: 'newer' };
+    s = clone(s);
+    if (s.v === 2) s = twoToThree(s, world);
+    // if (s.v === 3) s = threeToFour(s, world);      // future upgrades go here
+    if (s.v === SAVE_VERSION) return { save: s };
     return { error: 'unknown' };
+  }
+
+  /* Version 2 → 3: the Sunk Mill was rebuilt, and small keys and big keys now
+     belong to one dungeon each. Nothing Bodge found is taken away.
+     - Inside the old Mill: he goes back to Millbrook Vale, below the Mill Gate,
+       and the Mill starts fresh (its Luftballons and loot are kept).
+     - Old Mill already beaten: it counts as beaten in the new one too, and he
+       gets the Grapple Line, so no Sunstone or heart is earned twice.        */
+  function twoToThree(s, world) {
+    s.flags = s.flags || {}; s.seen = s.seen || {}; s.story = s.story || {};
+    s.items = s.items || {}; s.telk = s.telk || {};
+    const beaten = !!s.story.sun_mill;
+    const wasIn = (r) => r && OLD_MILL.includes(r.room);
+    if (wasIn(s.entry) || OLD_MILL.includes(s.room)) {
+      s.entry = { room: 'vale', x: 7, y: 1, face: 'down' };
+      s.room = 'vale'; s.px = 7; s.py = 1; s.face = 'down';
+    }
+    for (const id of OLD_MILL) { delete s.flags[id]; delete s.seen[id]; }
+    // Keys: version 2 had one pocket for every dungeon. The Hollow Oak's go to the oak.
+    const oakDone = !!s.story.sun_wood;
+    s.keyring = {};
+    if (oakDone) { s.keyring.hollowoak = { keys: 0, big: true }; s.keys = 0; s.bigKey = false; s.dun = null; }
+    else s.dun = 'hollowoak';
+    if (beaten) {
+      s.items.grapple = true;
+      for (const f of ['mill_sluice', 'mill_gears']) s.story[f] = 1;
+      s.keyring.sunkmill = { keys: 0, big: true };
+      // the new Kiln Heart: boss beaten, its heart vessel and Sunstone already taken
+      const heart = world && world.rooms && world.rooms.millheart;
+      const taken = {};
+      if (heart) {
+        const z = [];
+        heart.map.forEach((row, y) => [...row].forEach((c, x) => { if (c === 'Z') z.push([x, y]); }));
+        if (z.length) {
+          const bx = Math.min(...z.map((t) => t[0])), by = Math.min(...z.map((t) => t[1]));
+          taken[key(bx, by)] = 1; taken[key(bx + 1, by)] = 1;
+        }
+      }
+      s.flags.millheart = { opened: {}, chests: {}, taken, solved: true, bossDone: true, seen: true };
+    }
+    s.v = 3;
+    return s;
   }
 
   function create(data, hooks = {}) {
@@ -87,6 +139,8 @@
         region: (R && def() && (WORLD.regions[def().region] || {}).name) || LORE.world,
       };
       for (const [id, e] of Object.entries(LORE.enemies || {})) w[id] = e.name;
+      // every item by its id: {hopstaff}, {grapple}…
+      for (const [id, it] of Object.entries(LORE.items || {})) if (!(id in w)) w[id] = id === 'thwacker' ? weaponName() : it.name;
       for (const id of Object.keys(LORE.people || {})) w[id] = nameOf(id);
       return w;
     }
@@ -119,9 +173,11 @@
         names: {},
         room: WORLD.start, px: 7, py: 9, face: 'up',
         hearts: START_HEARTS, maxHearts: START_HEARTS,
-        keys: 0, bigKey: false,
+        keys: 0, bigKey: false,     // the keys for the dungeon Bodge is in (or was last in)
+        dun: null,                  // ...which dungeon that is
+        keyring: {},                // keys left in other dungeons: { hollowoak: { keys, big } }
         coins: 0, bag: {}, shield: 0, warm: 0,
-        items: { thwacker: true, hopstaff: false },
+        items: { thwacker: true, hopstaff: false, grapple: false },
         equip: 'thwacker',
         carry: false,
         flags: {},          // per room: doors opened, chests, pickups, solved
@@ -152,9 +208,10 @@
       const thornsOpen = field && d.thorns && G.story[d.thorns];
       const room = {
         id, field, base: [], look: field ? [] : null, obj: {}, enemies: [], embers: [], boss: null,
-        plates: [], burn: {}, cracks: {}, marks: [], people: {}, visitor: null,
+        plates: [], burn: {}, springs: {}, cracks: {}, marks: [], people: {}, visitor: null,
         chestAt: {}, signAt: {}, talkAt: {}, start: null, bossTiles: [], buildings: d.buildings || [],
       };
+      const bridgeUp = field && d.bridge && G.story[d.bridge];
       let ci = 0, si = 0, ti = 0, eid = 0;
       for (let y = 0; y < H; y++) {
         const row = (d.map && d.map[y]) || '';
@@ -165,8 +222,14 @@
           let t = '.', look = '.';
           if (field && FIELD_SOLID.includes(ch)) {
             if (ch === '%' && thornsOpen) { t = '.'; look = '.'; } else { t = '#'; look = ch; }
+          } else if (field && ch === 'B') {
+            // a bridge: broken (x, over water) until the room's "bridge" story flag is set
+            if (bridgeUp) look = 'B'; else { t = '#'; look = 'x'; }
           } else if (field && ':,'.includes(ch)) look = ch;
-          else if (!field && TERRAIN.includes(ch)) t = ch;
+          else if (!field && '123'.includes(ch)) {
+            // a machinery gate: opens once the story flag in stages[n - 1] is set
+            t = G.story[(d.stages || [])[Number(ch) - 1]] ? 's' : 'M';
+          } else if (!field && TERRAIN.includes(ch)) t = ch;
           else if (OBJECTS.includes(ch)) room.obj[key(x, y)] = ch;
           else if (ENEMY_CHARS[ch]) room.enemies.push(newEnemy(ENEMY_CHARS[ch], x, y, eid++));
           else if (ch === 'Z') room.bossTiles.push([x, y]);
@@ -176,7 +239,9 @@
           if (ch === 'N') {
             const entry = (d.talk || [])[ti];
             room.talkAt[key(x, y)] = ti++;
-            room.people[key(x, y)] = { who: entry ? entry.who : 'folk', face: (entry && entry.face) || 'down' };
+            // here: { if, unless } — someone who only stands here at some points in the story
+            if (entry && entry.here && !storyOk(entry.here)) delete room.obj[key(x, y)];
+            else room.people[key(x, y)] = { who: entry ? entry.who : 'folk', face: (entry && entry.face) || 'down' };
           }
           if (t === '_') room.plates.push([x, y]);
           room.base[y][x] = t;
@@ -198,12 +263,16 @@
       for (const k of Object.keys(f.opened)) {
         const [x, y] = k.split(',').map(Number);
         if (inB(x, y) && 'DB'.includes(room.base[y][x])) room.base[y][x] = 'd';
+        if (inB(x, y) && room.base[y][x] === 'G') room.base[y][x] = 'g';
       }
       for (const k of Object.keys(f.chests)) if (room.obj[k] === 'C') room.obj[k] = 'c';
       for (const k of Object.keys(f.taken)) if (KEEP_TAKEN.includes(room.obj[k] || '-')) delete room.obj[k];
       if (f.solved) {
         for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (room.base[y][x] === 'S') room.base[y][x] = 's';
-        for (const k of Object.keys(room.obj)) if (room.obj[k] === 'b') room.obj[k] = 'L';
+        for (const k of Object.keys(room.obj)) {
+          if (room.obj[k] === 'b') room.obj[k] = 'L';
+          if (room.obj[k] === '!') room.obj[k] = 'j';
+        }
         if (d.solve === 'enemies') room.enemies = [];
       }
       // Boss
@@ -222,13 +291,34 @@
       if (!f.taken[key(bx, by)]) room.obj[key(bx, by)] = 'X';
       if (!f.taken[key(bx + 1, by)]) room.obj[key(bx + 1, by)] = 'Q';
     }
-    // A story flag changed: brambles on this screen may need clearing
+    // A story flag changed: brambles on this screen may need clearing, a bridge building
     function refreshThorns() {
       const d = def();
-      if (!R.field || !d.thorns || !G.story[d.thorns]) return;
+      if (!R.field) return;
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-        if (R.look[y][x] === '%') { R.look[y][x] = '.'; R.base[y][x] = '.'; }
+        if (d.thorns && G.story[d.thorns] && R.look[y][x] === '%') { R.look[y][x] = '.'; R.base[y][x] = '.'; }
+        if (d.bridge && G.story[d.bridge] && R.look[y][x] === 'x') { R.look[y][x] = 'B'; R.base[y][x] = '.'; }
       }
+    }
+    // { if, unless }: story flags that must (or mustn't) be set
+    function storyOk(c) {
+      const list = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
+      return list(c.if).every((f) => G.story[f]) && !list(c.unless).some((f) => G.story[f]);
+    }
+    // Which dungeon a room belongs to, for its keys (outdoor screens: none)
+    function dungeonOf(id) {
+      const d = WORLD.rooms[id];
+      return d && d.kind !== 'field' ? d.page || d.region : null;
+    }
+    // Walking into another dungeon: put this one's keys away and take out that one's
+    function swapKeys(id) {
+      const dun = dungeonOf(id);
+      if (!dun || dun === G.dun) return;
+      G.keyring = G.keyring || {};
+      if (G.dun) G.keyring[G.dun] = { keys: G.keys, big: !!G.bigKey };
+      const k = G.keyring[dun] || { keys: 0, big: false };
+      G.keys = k.keys; G.bigKey = k.big;
+      G.dun = dun;
     }
 
     /* ---------- queries ---------- */
@@ -268,7 +358,7 @@
       return dy > 0 ? 'down' : 'up';
     }
     Object.assign(X, {
-      fmt, pages, cap, nameOf, def, F, flags, refreshThorns, bossLore,
+      fmt, pages, cap, nameOf, def, F, flags, refreshThorns, bossLore, storyOk, HIGH,
       baseAt, objAt, cracked, isGap, enemyAt, emberAt, bossAt, isHero,
       floorish, heroCanStand, enemyCanStand, front, dist, toward,
     });
@@ -290,6 +380,7 @@
       return 'dungeon';
     }
     function enterRoom(id, x, y, face, { quiet = false } = {}) {
+      swapKeys(id);
       R = build(id);
       G.room = id;
       G.carry = false;
@@ -420,6 +511,8 @@
       else if (t === 'D') on.toast(fmt(G.keys > 0 ? M.unlock : M.locked));
       else if (t === 'B') on.toast(fmt(G.bigKey ? M.unlock : M.bigLocked));
       else if (t === 'S') on.toast(fmt(M.sealed));
+      else if (t === 'M') on.toast(fmt(M.machine));
+      else if (t === 'G') on.toast(fmt(G.items.grapple ? M.gateHint : M.gateHeavy));
       else if (baseAt(x, y) === '%' && !G.items.hopstaff) on.toast(fmt(M.thornsLow));
       else if (isGap(x, y)) {
         if (!G.items.hopstaff) on.toast(fmt(M.gap));
@@ -486,10 +579,118 @@
           on.sound('unlock'); save(); on.change(); return true;
         }
         if (t === 'S') { on.toast(fmt(LORE.messages.sealed)); on.fx('bump'); return true; }
+        if (t === 'M') { on.toast(fmt(LORE.messages.machine)); on.fx('bump'); return true; }
+        if (o === '!' || o === 'j') { pullLever(fx, fy, false); world({}); return true; }
+        if (t === 'G' && !(G.equip === 'grapple' && G.items.grapple)) {
+          on.toast(fmt(G.items.grapple ? LORE.messages.gateHint : LORE.messages.gateHeavy)); on.fx('bump'); return true;
+        }
       }
       if (G.equip === 'hopstaff' && G.items.hopstaff) return vault();
+      if (G.equip === 'grapple' && G.items.grapple) return grapple();
       return swing();
     }
+
+    /* ---------- levers and the Grapple Line ---------- */
+    // A lever, pulled by hand or yanked from afar. With spring: N in the room,
+    // it springs back after N turns unless the room is solved by then.
+    function pullLever(x, y, far) {
+      const k = key(x, y), d = def();
+      if (R.obj[k] === 'j' && !d.spring) { on.toast(fmt(LORE.messages.leverDone)); return; }
+      R.obj[k] = 'j';
+      if (d.spring) R.springs[k] = d.spring + 1;
+      on.sound('lever');
+      on.fx(far ? 'line' : 'swing', { x, y });
+    }
+    function tickSprings() {
+      for (const k of Object.keys(R.springs)) {
+        R.springs[k] -= 1;
+        if (R.springs[k] <= 0) {
+          delete R.springs[k];
+          if (R.obj[k] === 'j') { R.obj[k] = '!'; on.sound('clang'); on.toast(fmt(LORE.messages.leverBack)); }
+        }
+      }
+    }
+    // Throw the hook straight ahead, up to GRAPPLE_RANGE tiles, over floor, gaps
+    // and thorns. The first thing it meets decides what happens:
+    //   a post (I)        Bodge is pulled across to the tile in front of it
+    //   a block or pot    dragged towards him (a block along the floor only;
+    //                     a pot flies over gaps and lands in his hands)
+    //   a lever or a sluice gate (G)   yanked: the lever pulls, the gate opens
+    //   the boss          engine/foes.js decides (the Kilnwarden's vents)
+    function grapple() {
+      const [dx, dy] = DIRS[G.face], M = LORE.messages;
+      const miss = (n, msg) => {
+        on.fx('line', { x: G.px + dx * n, y: G.py + dy * n });
+        on.sound('swish');
+        if (msg) on.toast(fmt(msg));
+        world({});
+        return true;
+      };
+      for (let i = 1; i <= GRAPPLE_RANGE; i++) {
+        const tx = G.px + dx * i, ty = G.py + dy * i;
+        if (!inB(tx, ty)) return miss(i - 1, M.noHook);
+        const t = baseAt(tx, ty), o = objAt(tx, ty);
+        if (bossAt(tx, ty)) {
+          on.fx('line', { x: tx, y: ty });
+          if (X.grappleBoss) X.grappleBoss(tx, ty, G.face);
+          world({});
+          return true;
+        }
+        if (t === 'G') {
+          R.base[ty][tx] = 'g'; F().opened[key(tx, ty)] = 1;
+          on.fx('line', { x: tx, y: ty }); on.sound('unlock');
+          on.toast(fmt(M.gateOpen)); save();
+          world({});
+          return true;
+        }
+        if (o === 'I') {
+          if (i === 1) return miss(0, M.atPost);
+          const lx = tx - dx, ly = ty - dy;
+          if (!heroCanStand(lx, ly)) return miss(i, M.noVault);
+          on.fx('line', { x: tx, y: ty });
+          G.px = lx; G.py = ly; G.step = (G.step || 0) + 1;
+          on.sound('hook');
+          stepOn();
+          world({});
+          return true;
+        }
+        if (o === '!' || o === 'j') { pullLever(tx, ty, true); world({}); return true; }
+        if (o === 'O' || o === 'P') return drag(tx, ty, i, o);
+        const e = enemyAt(tx, ty);
+        if (e) return miss(i, M.clink);
+        if (HIGH.includes(t) || SOLID_OBJ.includes(o || '-')) return miss(i - 1, M.noHook);
+      }
+      return miss(GRAPPLE_RANGE, M.noHook);
+    }
+    // Drag a block or pot (at distance n) back along the line towards Bodge
+    function drag(tx, ty, n, o) {
+      const [dx, dy] = DIRS[G.face];
+      on.fx('line', { x: tx, y: ty });
+      let x = tx, y = ty, moved = 0;
+      for (let i = n - 1; i >= 1; i--) {
+        const nx = G.px + dx * i, ny = G.py + dy * i;
+        const t = baseAt(nx, ny);
+        const free = !objAt(nx, ny) && !enemyAt(nx, ny) && !emberAt(nx, ny);
+        const ok = o === 'P' ? free && !HIGH.includes(t) : free && (t === '.' || t === '_') && !cracked(nx, ny);
+        if (!ok) break;
+        x = nx; y = ny; moved++;
+      }
+      delete R.obj[key(tx, ty)];
+      if (o === 'P' && x === G.px + dx && y === G.py + dy) {
+        // the pot flies all the way into his hands
+        G.carry = true;
+        on.sound('lift');
+      } else if (o === 'P' && isGap(x, y)) {
+        on.sound('smash'); on.fx('poof', { x, y });      // dropped into the gap
+      } else {
+        R.obj[key(x, y)] = o;
+        on.sound(moved ? 'push' : 'clang');
+        if (!moved) on.toast(fmt(LORE.messages.stuck));
+      }
+      world({});
+      return true;
+    }
+    X.pullLever = pullLever;
 
     function openChest(x, y) {
       const k = key(x, y);
@@ -571,7 +772,7 @@
     function vault() {
       const [dx, dy] = DIRS[G.face];
       const x1 = G.px + dx, y1 = G.py + dy, x2 = G.px + 2 * dx, y2 = G.py + 2 * dy;
-      const low = inB(x1, y1) && !'#DBS'.includes(baseAt(x1, y1)) && !bossAt(x1, y1)
+      const low = inB(x1, y1) && !HIGH.includes(baseAt(x1, y1)) && !bossAt(x1, y1)
         && !TALL_OBJ.includes(objAt(x1, y1) || '-');
       if (!low || !inB(x2, y2) || !heroCanStand(x2, y2)) {
         on.toast(fmt(LORE.messages.noVault));
@@ -594,7 +795,7 @@
         const tx = G.px + dx * i, ty = G.py + dy * i;
         if (!inB(tx, ty)) break;
         const t = baseAt(tx, ty), o = objAt(tx, ty);
-        if ('#DBS'.includes(t) || SOLID_OBJ.includes(o || '-') || bossAt(tx, ty)) break;
+        if (HIGH.includes(t) || SOLID_OBJ.includes(o || '-') || bossAt(tx, ty)) break;
         x = tx; y = ty;
         const em = emberAt(tx, ty);
         if (em) { R.embers.splice(R.embers.indexOf(em), 1); landed = [tx, ty]; break; }
@@ -625,6 +826,7 @@
       }
       if (R.boss && !G.over) X.bossTurn();
       tickBurn();
+      tickSprings();
       tickCracks();
       checkSolve();
       on.change();
@@ -657,6 +859,9 @@
         ok = vals.includes('l') && !vals.includes('b');
       } else if (d.solve === 'enemies') {
         ok = R.enemies.length === 0;
+      } else if (d.solve === 'levers') {
+        const vals = Object.values(R.obj);
+        ok = vals.includes('j') && !vals.includes('!');
       }
       if (ok) solve(false);
     }
@@ -666,7 +871,9 @@
       f.solved = true;
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (R.base[y][x] === 'S') R.base[y][x] = 's';
       for (const k of Object.keys(R.obj)) if (R.obj[k] === 'l') R.obj[k] = 'L';
-      R.burn = {};
+      R.burn = {}; R.springs = {};
+      // sets: a story flag (or list) the room turns on when solved, e.g. the mill's machinery
+      for (const fl of [].concat(def().sets || [])) G.story[fl] = 1;
       if (!quiet) { on.sound('solve'); on.toast(fmt(def().solvedText || LORE.messages.solved)); }
       save();
     }
@@ -685,7 +892,7 @@
       return true;
     }
     function load(saved) {
-      const m = migrate(saved);
+      const m = migrate(saved, WORLD);
       if (m.error) return { ok: false, error: m.error };
       const s = m.save;
       if (!s.entry || !WORLD.rooms[s.entry.room]) return { ok: false, error: 'room' };
@@ -727,9 +934,11 @@
         if (o === 'P') return 'Lift';
         if (o === 'O') return 'Push';
         if (o === 'b' || o === 'l') return 'Light';
+        if (o === '!' || o === 'j') return 'Pull';
         if (t === 'D' || t === 'B') return 'Unlock';
       }
       if (G.equip === 'hopstaff' && G.items.hopstaff) return 'Vault';
+      if (G.equip === 'grapple' && G.items.grapple) return 'Hook';
       if (inB(fx, fy) && (enemyAt(fx, fy) || bossAt(fx, fy))) return 'Strike';
       return 'Swing';
     }
@@ -746,7 +955,8 @@
       get G() { return G; },
       get R() { return R; },
       W, H, DIRS, SAVE_VERSION,
-      fmt, pages, nameOf, tone, migrate, weaponName,
+      fmt, pages, nameOf, tone, weaponName,
+      migrate: (s) => migrate(s, WORLD),
       newGame, load, resetRoom, revive, equip, act, pinchVerb,
       snapshot() { return clone({ G, R }); },
       restore(s) { G = clone(s.G); R = clone(s.R); },

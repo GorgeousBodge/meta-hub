@@ -87,6 +87,32 @@ window.BAMBER_ART = {
       '...Y..FYF.',
       '...g...F..',
     ],
+    // a bridge over water, running up and down the screen (the water shows through the dots)
+    bridge: [
+      'T.tttttt.T',
+      'T.TTTTTT.T',
+      'TttttttttT',
+      'T.TTTTTT.T',
+      'T.tttttt.T',
+      'TTTTTTTTTT',
+      'T.tttttt.T',
+      'TttttttttT',
+      'T.TTTTTT.T',
+      'T.tttttt.T',
+    ],
+    // ...and what's left of one: stumps and a dangling plank
+    bridge_out: [
+      'T........T',
+      'T........T',
+      'Tt.......T',
+      '..........',
+      '..........',
+      '......t...',
+      '.....tT...',
+      '..........',
+      'T........T',
+      'T.......tT',
+    ],
   },
 
   /* ---------- people (10 wide × 12 tall; the top 2 rows sit above the tile) ---------- */

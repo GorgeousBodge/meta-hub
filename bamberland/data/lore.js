@@ -57,12 +57,21 @@ window.BAMBER_LORE = {
       // Each Sunstone lets Brendan reforge it: one entry per level
       forged: [
         { name: 'Sunbright Thwacker', desc: 'Reforged by {brendan} with a Sunstone. Hits twice as hard. Still clangs off anything spiky.' },
+        { name: 'Millstone Thwacker', desc: 'Reforged again, banded with iron from the mill wheel. Three times the thwack. Spiky things still laugh at it.' },
       ],
     },
     hopstaff: {
       name: 'Hopstaff',
       desc: 'A springy pole. Pinch to vault two tiles, over gaps and foes.',
       found: ['You found the {item}! A springy pole, worn smooth by somebody very bouncy.', 'Press Back, choose it, then pinch to vault two tiles: over gaps, thorns and foes.'],
+    },
+    grapple: {
+      name: 'Grapple Line',
+      desc: 'Reaches five tiles. Hook posts to cross; drag blocks and pots; yank levers and gates.',
+      found: [
+        'You found the {grapple}! A hook on a very long line, and a note: "Property of the mill. Do not swing at ducks."',
+        'Press Back, choose it, then pinch. Hook a post to be pulled across; drag blocks and pots to you; yank levers and sluice gates from afar.',
+      ],
     },
   },
 
@@ -136,10 +145,10 @@ window.BAMBER_LORE = {
     },
     kiln: {
       name: 'the Kilnwarden',
-      closed: 'Too hot! Wait for it to cool',
+      closed: 'Too hot! Yank its vents open first',
       intro: [
         'A furnace stirs in the dark. Its grate glows like an eye.',
-        '{Boss} wakes. Watch its pattern: only a cool core can be hit.',
+        '{Boss} wakes. When the vents facing you glow, line up and yank them open with the {grapple}. When it cools, vault in and strike.',
       ],
       defeat: [
         '{Boss} cracks, sighs, and goes cold.',
@@ -169,6 +178,19 @@ window.BAMBER_LORE = {
     full: "Can't carry any more of those",
     bought: 'Bought: {name}',
     heartsFull: 'Hearts are already full',
+    // the Grapple Line, levers, gates and the mill
+    noHook: 'Nothing to hook',
+    atPost: "You're already at the post",
+    clink: 'Clink! The hook bounces off',
+    gateHeavy: 'A sluice gate. Far too heavy to lift',
+    gateHint: 'Equip the {grapple} to yank it',
+    gateOpen: 'The sluice gate grinds open',
+    machine: "Machinery. It won't move yet",
+    leverDone: 'Already pulled',
+    leverBack: 'Clunk! A lever sprang back',
+    ventShut: 'That vent is shut tight',
+    cooled: 'Hiss! Its core is cooling',
+    ventOne: 'Hiss! Now the other vent'
   },
 
   outCold: {

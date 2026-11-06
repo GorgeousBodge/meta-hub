@@ -26,7 +26,10 @@
          { lines: [...] },                          // the fallback
      ] }
    Each option can also have: unless (flag), give ('coins:5', 'tonic'…),
-   shop ('kev', opens the shop after the lines), cut (a cut scene id).
+   shop ('kev', opens the shop after the lines), cut (a cut scene id),
+   forge (Brendan reforges the Thwacker to that level).
+   here: { if, unless } on the person (next to who:) means they only stand
+   there at that point in the story.
    ========================================================================== */
 BAMBER_WORLD.add('wood', {
   village: {
@@ -72,12 +75,14 @@ BAMBER_WORLD.add('wood', {
         ] },
         { shop: 'kev', lines: ['Back again, {hero}? Lovely. Every balloon you spend goes on the roof.'] },
       ] },
-      { who: 'brendan', face: 'right', say: [
+      // here: Brendan leaves the village once he's reforged the Thwacker; he's at the river crossing (world/mill.js)
+      { who: 'brendan', face: 'right', here: { unless: 'forged1' }, say: [
         { if: 'sun_wood', unless: 'forged1', set: 'forged1', forge: 1, lines: [
           "Is that a Sunstone? Give it here. And the {weapon}. Don't look so worried.",
           '*CLANG* *CLANG* *hiss*',
           "There. It'll hit twice as hard now. Still won't dent anything spiky, mind.",
           "The brambles on the west road have shrivelled up too. Millbrook Vale's that way.",
+          "I'm off there myself. Word is the bridge over the river's out. Meet me at the crossing.",
         ] },
         { if: 'forged1', lines: ['Swing it gently. Or don\'t. I\'m not your mum.', 'Bring me another Sunstone and we\'ll see what else it can do.'] },
         { if: 'brambles', lines: ['Brambles are down. Mind the splinters.', 'Bring me some timber one day and I\'ll build you a bridge.'] },

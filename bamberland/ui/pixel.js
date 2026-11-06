@@ -101,7 +101,7 @@
 
   /* ---------- ground ----------
      look(x, y) gives the ground letter: . grass  , flowers  : path  ~ water
-     T tree  * bush  f fence  % brambles.
+     T tree  * bush  f fence  % brambles  B bridge  x broken bridge.
      Restored regions draw a filled floor; the gloom draws a sparse one
      (tufts and pebbles on see-through black), as chosen in the look test. */
   function ground(g, look, md, alpha = 1) {
@@ -115,7 +115,7 @@
     g.globalAlpha = alpha;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const t = at(x, y), X = x * T, Y = OY + y * T;
-      const isPath = t === ':', isWater = t === '~';
+      const isPath = t === ':', isWater = t === '~' || t === 'B' || t === 'x';
       if (filled) {
         g.fillStyle = isPath ? fill.path : isWater ? fill.water : fill.grass;
         g.fillRect(X, Y, T, T);
@@ -161,6 +161,8 @@
       else if (t === '*') blit(g, sprite(ART.TILES.bush, P, md, false, 'bush'), X, Y);
       else if (t === 'f') blit(g, sprite(ART.TILES.fence, P, md, false, 'fence'), X, Y);
       else if (t === '%') blit(g, sprite(ART.OBJECTS.thorns, P, md, false, 'thorns'), X, Y);
+      else if (t === 'B') blit(g, sprite(ART.TILES.bridge, P, md, false, 'bridge'), X, Y);
+      else if (t === 'x') blit(g, sprite(ART.TILES.bridge_out, P, md, false, 'bridge_out'), X, Y);
     }
     g.restore();
   }

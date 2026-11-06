@@ -27,7 +27,12 @@
   border: 1px solid var(--line); border-radius: 8px;
   color: var(--accent); font-size: 14px; letter-spacing: .1em; text-transform: uppercase;
 }
-.bl-equip .ico { width: 22px; height: 22px; }
+.bl-equip .ico { width: 22px; height: 22px; flex: none; }
+/* Long names (the reforged Thwacker) and lots of hearts still fit the bar */
+.bl-equip span { max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-equip { min-width: 0; flex-shrink: 1; }
+.bl-hearts.is-many .bl-heart { width: 19px; height: 19px; }
+.bl-hearts.is-lots .bl-heart { width: 16px; height: 16px; }
 .hud-clock { margin-left: 0; }
 
 /* --- Board ------------------------------------------------------------- */
