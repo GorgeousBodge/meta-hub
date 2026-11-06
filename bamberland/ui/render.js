@@ -174,12 +174,16 @@
     if (t === '%') { Px.blit(g, Px.art('thorns', 'day'), X, Y); return; }
     if (t === 'M') { drawMachineGate(g, X, Y); return; }
     if (t === 'G') { drawSluiceGate(g, X, Y); return; }
-    if (t === '~' || cracked) { drawGap(g, X, Y, !!cracked); return; }
-    // floor: a small cross at the tile centre
+    if (t === '~' || cracked) { drawGap(g, R, x, y, !!cracked); return; }
+    // floor: a flagstone, its corners marked and a small cross at its centre,
+    // so floor reads as solid ground next to the empty holes
     stroke(g, tint ? tint.floor : 'rgba(63,224,255,0.16)', 1, 0);
     g.beginPath();
     g.moveTo(X + 18, Y + 20); g.lineTo(X + 22, Y + 20);
     g.moveTo(X + 20, Y + 18); g.lineTo(X + 20, Y + 22);
+    for (const [cx, cy, dx, dy] of [[X + 3, Y + 3, 1, 1], [X + 37, Y + 3, -1, 1], [X + 3, Y + 37, 1, -1], [X + 37, Y + 37, -1, -1]]) {
+      g.moveTo(cx + dx * 6, cy); g.lineTo(cx, cy); g.lineTo(cx, cy + dy * 6);
+    }
     g.stroke();
     if (t === '_') {
       const pressed = R.obj[x + ',' + y] === 'O' || R.enemies.some((e) => e.x === x && e.y === y && e.type === 'mimmet');
@@ -251,18 +255,47 @@
     }
   }
 
-  function drawGap(g, X, Y, cracked) {
-    noGlow(g);
-    g.fillStyle = cracked ? 'rgba(255,92,122,0.08)' : 'rgba(255,194,74,0.05)';
-    g.fillRect(X + 3, Y + 3, T - 6, T - 6);
-    stroke(g, cracked ? 'rgba(255,92,122,0.7)' : C.amberDim, 1.5, 0);
-    g.setLineDash([4, 4]);
-    g.strokeRect(X + 4, Y + 4, T - 8, T - 8);
-    g.setLineDash([]);
+  /* A gap is a hole: nothing inside (black is see-through on the glasses, so the
+     hole really does look empty), with a bright lip wherever it meets floor.
+     Floor beyond its far (top) edge gets a short cliff face hanging down, so it
+     reads as a drop rather than a flat tile. Cracks from a slam look the same in red. */
+  function drawGap(g, R, x, y, cracked) {
+    const X = px(x), Y = py(y);
+    const hole = (a, b) => {
+      if (a < 0 || b < 0 || a >= W || b >= H) return true;
+      const t = R.base[b][a];
+      return t === '~' || t === '#' || t === '*' || !!(R.cracks && R.cracks[a + ',' + b]);
+    };
+    // amber, so a drop never looks like one of the cyan walls
+    const lip = cracked ? C.red : C.amber;
+    const face = cracked ? 'rgba(255,92,122,0.35)' : 'rgba(255,194,74,0.32)';
+    // the lips
+    stroke(g, lip, 2, 4);
     g.beginPath();
-    if (cracked) { g.moveTo(X + 8, Y + 12); g.lineTo(X + 18, Y + 20); g.lineTo(X + 14, Y + 28); g.lineTo(X + 30, Y + 32); }
-    else { g.moveTo(X + 10, Y + 30); g.lineTo(X + 30, Y + 10); g.moveTo(X + 10, Y + 20); g.lineTo(X + 20, Y + 10); g.moveTo(X + 20, Y + 30); g.lineTo(X + 30, Y + 20); }
+    if (!hole(x, y - 1)) { g.moveTo(X, Y + 2); g.lineTo(X + T, Y + 2); }
+    if (!hole(x, y + 1)) { g.moveTo(X, Y + T - 2); g.lineTo(X + T, Y + T - 2); }
+    if (!hole(x - 1, y)) { g.moveTo(X + 2, Y); g.lineTo(X + 2, Y + T); }
+    if (!hole(x + 1, y)) { g.moveTo(X + T - 2, Y); g.lineTo(X + T - 2, Y + T); }
     g.stroke();
+    // the far wall of the drop, under a top lip: strata fading down into the dark
+    if (!hole(x, y - 1)) {
+      stroke(g, face, 1.5, 0);
+      g.beginPath();
+      for (const [ox, len] of [[6, 12], [14, 7], [22, 14], [31, 9]]) { g.moveTo(X + ox, Y + 3); g.lineTo(X + ox, Y + 3 + len); }
+      g.stroke();
+      stroke(g, cracked ? 'rgba(255,92,122,0.18)' : 'rgba(255,194,74,0.16)', 1, 0);
+      g.beginPath(); g.moveTo(X, Y + 9); g.lineTo(X + T, Y + 9); g.stroke();
+    }
+    if (cracked) {
+      stroke(g, 'rgba(255,92,122,0.7)', 1.5, 0);
+      g.beginPath(); g.moveTo(X + 8, Y + 14); g.lineTo(X + 18, Y + 22); g.lineTo(X + 14, Y + 30); g.lineTo(X + 30, Y + 33); g.stroke();
+    } else {
+      // a speck or two of falling dust, placed by the tile so it never jumps about
+      noGlow(g); g.fillStyle = 'rgba(169,194,207,0.35)';
+      const n = (x * 7 + y * 13) % 5;
+      g.fillRect(X + 9 + n * 4, Y + 22 + (n % 3) * 4, 2, 2);
+      if (n % 2) g.fillRect(X + 27 - n * 2, Y + 30, 2, 2);
+    }
   }
 
   function drawDoor(g, X, Y, big) {
